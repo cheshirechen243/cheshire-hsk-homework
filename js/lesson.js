@@ -131,6 +131,7 @@ HSKShell.boot({ need: 'student', noBanner: true }, async (user, main) => {
     if (sub.comment) h +=`<div class="cm"><b>老师评语 Nhận xét:</b> ${esc(sub.comment)}</div>`;
     const cs = sub.comments ? Object.entries(sub.comments).filter(([, v]) => v) : [];
     if (cs.length) h += '<div class="cm">' + cs.map(([k, v]) => `<div>· <b>${G.label(k)}:</b> ${esc(v)}</div>`).join('') + '</div>';
+    if (asg && asg.classroomUrl) h += '<div style="margin-top:10px"><a class="btn sm" href="' + esc(asg.classroomUrl) + '" target="_blank" rel="noopener">↩ 回到 Classroom 标记完成 · Quay lại Classroom đánh dấu hoàn thành</a></div>';
     d.innerHTML = h; info.appendChild(d);
   }
 
@@ -181,7 +182,8 @@ HSKShell.boot({ need: 'student', noBanner: true }, async (user, main) => {
       <p style="text-align:center;margin:6px 0" class="hint">自动评分的题目得分<br><span class="vi">Điểm các câu chấm tự động</span></p>
       ${res.pending ? `<p style="text-align:center">还有 <b>${res.pending}</b> 题等老师批改<br><span class="vi">Còn ${res.pending} câu chờ cô chấm</span></p>` : ''}
       <p class="hint" style="text-align:center">页面上 ✅ = 对,❌ = 错,并显示正确答案。<br><span class="vi">✅ = đúng, ❌ = sai, có hiện đáp án đúng.</span></p>
-      <div class="modal-f"><button class="btn" type="button">查看答案 · Xem đáp án</button></div>`;
+      ${asg && asg.classroomUrl ? `<p class="hint" style="text-align:center">请回 Classroom 点「标记为完成」,老师才知道你已经做完。<br><span class="vi">Hãy quay lại Classroom bấm “Đánh dấu hoàn thành” để cô biết em đã làm xong.</span></p>` : ''}
+      <div class="modal-f">${asg && asg.classroomUrl ? `<a class="btn ghost" href="${esc(asg.classroomUrl)}" target="_blank" rel="noopener">↩ 回到 Classroom · Về Classroom</a>` : ''}<button class="btn" type="button">查看答案 · Xem đáp án</button></div>`;
     ov.appendChild(m); document.body.appendChild(ov);
     const close = () => ov.remove(); m.querySelector('.x').onclick = close; m.querySelector('.btn').onclick = close;
   }

@@ -3,6 +3,7 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const toast = t => { const d = $('div', 'toast', t); document.body.appendChild(d); setTimeout(() => d.remove(), 2200); };
 
+  window.addEventListener('unhandledrejection', e => toast('出错了:' + ((e.reason && e.reason.message) || e.reason)));
   const extra = $('span'); const a1 = $('a', 'btn ghost sm', '学生页面 Trang học sinh'); a1.href = 'index.html'; extra.appendChild(a1);
   main.appendChild(HSKShell.topline(user, extra));
 
@@ -133,9 +134,16 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
       });
     };
     const logoUrl = new URL('img/logo-mail.png', location.href).href;
+    // the card builder lives in js/mailcard.js; load it on demand so a missing <script> tag can never make the buttons dead
+    const ensureCard = async () => {
+      if (window.HSKMailCard) return;
+      await new Promise((res, rej) => { const s = document.createElement('script'); s.src = S.root + 'js/mailcard.js?v=' + Date.now(); s.onload = res; s.onerror = () => rej(new Error('找不到 js/mailcard.js —— 请把它上传到网站的 js 文件夹')); document.head.appendChild(s); });
+      if (!window.HSKMailCard) throw new Error('js/mailcard.js 加载失败');
+    };
     const preview = $('button', 'btn ghost sm', '👁 预览成绩单邮件'); row.appendChild(preview);
-    preview.onclick = () => {
+    preview.onclick = async () => {
       if (!sub.graded) { toast('请先保存批改'); return; }
+      try { await ensureCard(); } catch (e) { alert('无法预览:' + e.message); return; }
       const ov = $('div', 'modal-ov'); const m = $('div', 'modal wide'); m.style.maxWidth = '640px';
       m.innerHTML = '<div class="modal-h"><b>成绩单邮件预览</b><button class="x" type="button">✕</button></div>';
       const fr = $('iframe'); fr.style.cssText = 'width:100%;height:70vh;border:2px solid var(--outline);border-radius:10px;margin-top:8px;background:#fff';
@@ -143,8 +151,8 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
       const close = () => ov.remove(); m.querySelector('.x').onclick = close; ov.onclick = e => { if (e.target === ov) close(); };
     };
     const sendMail = async () => {
-      const c = card();
       try {
+        await ensureCard(); const c = card();
         const r = await S.notify(sub.email, c.subject, c.text, c.html, logoUrl);
         toast(r === 'sent' ? '成绩单邮件已发送 ✓' : r === 'sent?' ? '已发出请求(无法确认,请让学生查收)' : '已打开 Gmail 写信窗口(纯文字版),检查后点「发送」');
       } catch (e) { alert('邮件没有发出:' + e.message + '\n\n请检查 config.js 的 mailEndpoint 和 Apps Script 部署(见 SETUP.md 第 4 步)。'); }
@@ -180,15 +188,38 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
       const list = (await S.listAssignments()).sort((a, b) => (b.created || '').localeCompare(a.created || ''));
       const subs = await S.listSubmissions().catch(() => []);
       if (!list.length) { wrap.innerHTML = '<p class="hint">还没有布置过作业。</p>'; return; }
-      const t = $('table', 'tbl'); t.innerHTML = '<tr><th>课</th><th>班级</th><th>截止</th><th>已交</th><th>状态</th><th>学生链接(贴到 Classroom)</th><th></th></tr>';
+      const t = $('table', 'tbl'); t.innerHTML = '<tr><th>课</th><th>班级</th><th>截止</th><th>进度(已交/全班)</th><th>状态</th><th>学生链接(贴到 Classroom)</th><th></th></tr>';
       list.forEach(a => {
         const L = lessonMap[a.lessonId] || { no: '?', title: a.lessonId };
-        const n = subs.filter(s => s.asg === a.code).length;
+        // progress against the class roster (students list), matched by lesson so a re-issued link still counts
+        const roster = students.filter(s => !a.cls || String(s.cls || '').toLowerCase() === String(a.cls).toLowerCase());
+        const submitted = new Set(subs.filter(s => s.lessonId === a.lessonId).map(s => s.email));
+        const missing = roster.filter(s => !submitted.has(s.email));
+        const n = roster.length ? `<b>${roster.length - missing.length}</b> / ${roster.length}` : `${subs.filter(s => s.asg === a.code).length}`;
         const tr = $('tr');
-        tr.innerHTML = `<td><b>${lname(L)}</b><br><span class="vi">${esc(L.title)}</span></td><td>${esc(a.cls || '全部')}</td><td>${a.due || '-'}</td><td>${n}</td><td></td><td><div class="linkrow"><input type="text" readonly value="${link(a.code)}"><button class="btn sm" type="button">复制</button></div></td><td></td>`;
+        tr.innerHTML = `<td><b>${lname(L)}</b><br><span class="vi">${esc(L.title)}</span></td><td>${esc(a.cls || '全部')}</td><td>${a.due || '-'}</td><td>${n}</td><td></td><td><div class="linkrow"><input type="text" readonly value="${link(a.code)}"><button class="btn sm" type="button">复制</button></div><div class="linkrow" style="margin-top:6px"><input type="text" class="cru" placeholder="Classroom 作业网址(可选)" value="${esc(a.classroomUrl || '')}"></div></td><td></td>`;
         const stc = tr.children[4]; const tog = $('button', 'btn sm ' + (a.open === false ? 'ghost' : 'blue'), a.open === false ? '已关闭 · 点击开放' : '开放中 · 点击关闭');
         tog.onclick = async () => { a.open = a.open === false; await S.saveAssignment(a); toast(a.open ? '已开放' : '已关闭'); draw(); }; stc.appendChild(tog);
         const inp = tr.querySelector('input'); inp.onfocus = () => inp.select();
+        // optional: the Classroom post's address. Students then get a "back to Classroom" button after they submit.
+        const cru = tr.querySelector('.cru');
+        cru.onchange = async () => { a.classroomUrl = cru.value.trim(); await S.saveAssignment(a); toast(a.classroomUrl ? 'Classroom 网址已保存 ✓' : '已清除'); };
+        if (missing.length) {
+          const mb = $('button', 'btn ghost sm', `未交名单 (${missing.length})`); mb.style.marginTop = '6px'; mb.style.display = 'block'; tr.children[3].appendChild(mb);
+          mb.onclick = () => {
+            const ov = $('div', 'modal-ov'); const m = $('div', 'modal'); m.style.maxWidth = '520px';
+            const names = missing.map(s => s.name || s.email).join(', '); const due = a.due ? ` (hạn / 截止: ${a.due})` : '';
+            const msg = `Chào cả lớp 👋 Bài "${L.titleVi || L.title}" (${lname(L)}) các bạn sau chưa nộp: ${names}${due}\nLink: ${link(a.code)}\n\n大家好!${lname(L)}《${L.title}》还没交的同学:${names}${a.due ? '(截止 ' + a.due + ')' : ''}\n链接:${link(a.code)}`;
+            m.innerHTML = `<div class="modal-h"><b>未交名单 · ${lname(L)} · ${esc(a.cls || '全部')}</b><button class="x" type="button">✕</button></div>`;
+            const ul = $('div'); ul.style.cssText = 'margin:8px 0;max-height:200px;overflow:auto;border:2px solid var(--outline);border-radius:8px;background:#fff;padding:6px 10px';
+            ul.innerHTML = missing.map(s => `<div>${esc(s.name || '')} <span class="vi">${esc(s.email)}</span></div>`).join('');
+            const ta = $('textarea'); ta.value = msg; ta.style.cssText = 'width:100%;min-height:130px';
+            const cp = $('button', 'btn', '复制催交消息'); cp.style.marginTop = '8px';
+            cp.onclick = async () => { try { await navigator.clipboard.writeText(ta.value); } catch (e) { ta.select(); document.execCommand('copy'); } toast('已复制,可贴到 Classroom / Messenger / Zalo ✓'); };
+            m.append(ul, ta, cp); ov.appendChild(m); document.body.appendChild(ov);
+            const close = () => ov.remove(); m.querySelector('.x').onclick = close; ov.onclick = e => { if (e.target === ov) close(); };
+          };
+        }
         tr.querySelector('.linkrow .btn').onclick = async () => { try { await navigator.clipboard.writeText(link(a.code)); } catch (e) { inp.select(); document.execCommand('copy'); } toast('链接已复制 ✓'); };
         const del = $('button', 'btn ghost sm', '删除'); del.onclick = async () => { if (!confirm('删除这个链接?已交的作业不会被删除,但学生将无法再用这个链接打开。')) return; await S.deleteAssignment(a.code); draw(); }; tr.lastChild.appendChild(del);
         t.appendChild(tr);
