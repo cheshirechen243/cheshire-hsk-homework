@@ -246,3 +246,7 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
 .btn, .tab, .tbl th, .modal-h, .card h1, .card h2, .toast { font-weight: 800; }
 .fixrow { position: absolute; z-index: 7; display: flex; gap: .8cqw; align-items: flex-start; margin-top: 3px; }
 .fixrow .fix-tag, .fixrow .cmt { position: static; transform: none; margin: 0; }
+
+.tbl tr.pend { cursor: default; opacity: .68; }
+.tbl tr.pend:hover { background: transparent; }
+.badge.todo { background: #E9E6F5; }

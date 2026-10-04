@@ -21,48 +21,71 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
   // =====================================================  submissions list
   async function viewSubs() {
     body.innerHTML = ''; const card = $('div', 'card'); body.appendChild(card);
-    card.innerHTML = '<h2>学生提交 · Bài nộp</h2>';
+    card.innerHTML = '<h2>学生提交 · Bài nộp</h2><p class="hint">布置过的作业,<b>全班每个学生一行</b>:还没交的显示「未提交」,交了就能点进去批改。<br><span class="vi">Mỗi học sinh một dòng: chưa nộp hiện “Chưa nộp”, đã nộp bấm vào để chấm.</span></p>';
     const ctl = $('div', 'row-ctl'); card.appendChild(ctl);
     const sel = $('select'); sel.innerHTML = '<option value="">全部课 Tất cả</option>' + lessons.filter(l => l.open).map(l => `<option value="${l.id}">${lname(l)} ${l.title}</option>`).join('');
-    const st = $('select'); st.innerHTML = '<option value="">全部状态</option><option value="todo">待批改</option><option value="done">已批改</option>';
+    const st = $('select'); st.innerHTML = '<option value="">全部状态</option><option value="none">未提交</option><option value="todo">待批改</option><option value="done">已批改</option>';
     const q = $('input'); q.type = 'text'; q.placeholder = '搜索姓名/邮箱';
     const cl = $('select'); cl.innerHTML = '<option value="">全部班级</option>';
     const csv = $('button', 'btn ghost sm', '导出 CSV'); const rf = $('button', 'btn ghost sm', '刷新');
     ctl.append(sel, cl, st, q, rf, csv);
+    const sum = $('div', 'hint'); card.appendChild(sum);
     const wrap = $('div'); wrap.style.overflowX = 'auto'; card.appendChild(wrap);
     let rows = [];
+    const statusOf = r => r._pending ? 'none' : (r.graded ? 'done' : 'todo');
     const load = async () => {
       wrap.textContent = '加载中…';
-      rows = await S.listSubmissions();
+      const [subs, students, asgs] = await Promise.all([S.listSubmissions(), S.listStudents().catch(() => []), S.listAssignments().catch(() => [])]);
+      rows = subs.slice();
+      // every student of an assigned class gets a row for that lesson, even before handing in
+      const seen = new Set(rows.map(r => r.lessonId + '|' + r.email));
+      asgs.forEach(a => students.filter(s => !a.cls || String(s.cls || '').toLowerCase() === String(a.cls).toLowerCase()).forEach(s => {
+        const k = a.lessonId + '|' + s.email; if (seen.has(k)) return; seen.add(k);
+        rows.push({ _pending: true, lessonId: a.lessonId, lessonNo: (lessonMap[a.lessonId] || {}).no, email: s.email, name: s.name || s.email, cls: s.cls || '', asg: a.code, due: a.due });
+      }));
       const keepC = cl.value; cl.innerHTML = '<option value="">全部班级</option>' + classesOf(rows).map(c => `<option>${esc(c)}</option>`).join(''); cl.value = keepC;
-      for (const id of new Set(rows.map(r => r.lessonId))) await getLK(id).catch(() => { });
-      rows.forEach(r => { const lk = cache[r.lessonId]; r._res = lk ? G.gradeAll(lk.lesson, r, lk.key) : null; });
+      for (const id of new Set(rows.filter(r => !r._pending).map(r => r.lessonId))) await getLK(id).catch(() => { });
+      rows.forEach(r => { if (r._pending) return; const lk = cache[r.lessonId]; r._res = lk ? G.gradeAll(lk.lesson, r, lk.key) : null; });
       draw();
     };
+    const filtered = () => rows.filter(r => (!sel.value || r.lessonId === sel.value) && (!cl.value || (r.cls || '') === cl.value) && (!st.value || statusOf(r) === st.value) && (!q.value || (r.name + r.email).toLowerCase().includes(q.value.toLowerCase())))
+      .sort((a, b) => (!!a._pending - !!b._pending) || (a._pending ? ((a.cls || '').localeCompare(b.cls || '') || String(a.name).localeCompare(String(b.name))) : (b.submittedAt || '').localeCompare(a.submittedAt || '')));
     const draw = () => {
-      const f = rows.filter(r => (!sel.value || r.lessonId === sel.value) && (!cl.value || (r.cls || '') === cl.value) && (!st.value || (st.value === 'done') === !!r.graded) && (!q.value || (r.name + r.email).toLowerCase().includes(q.value.toLowerCase())))
-        .sort((a, b) => (b.submittedAt || '').localeCompare(a.submittedAt || ''));
-      if (!f.length) { wrap.innerHTML = '<p class="hint">还没有提交。Chưa có bài nộp.</p>'; return; }
+      const f = filtered();
+      const cnt = { none: 0, todo: 0, done: 0 }; f.forEach(r => cnt[statusOf(r)]++);
+      sum.innerHTML = f.length ? `共 ${f.length} 人 · <b>未提交 ${cnt.none}</b> · 待批改 ${cnt.todo} · 已批改 ${cnt.done}` : '';
+      if (!f.length) { wrap.innerHTML = '<p class="hint">还没有内容。先到「学生名单」登记学生,再在「布置作业」生成班级链接。</p>'; return; }
       const t = $('table', 'tbl'); t.innerHTML = '<tr><th>学生</th><th>班级</th><th>课</th><th>提交时间</th><th>自动分</th><th>待批改</th><th>总分</th><th>百分比</th><th>状态</th></tr>';
       f.forEach(r => {
-        const x = r._res; const tr = $('tr', 'row');
-        const sc = r.graded ? [r.finalScore, r.finalMax] : (x ? [x.total, x.max] : null);
-        const total = sc ? `${sc[0]}/${sc[1]}` : '-', pc = sc ? G.pct(sc[0], sc[1]) : '-';
-        tr.innerHTML = `<td><b>${esc(r.name)}</b><br><span class="vi">${esc(r.email)}</span></td><td>${esc(r.cls || '-')}</td><td>${lname(lessonMap[r.lessonId] || { no: r.lessonNo })}</td><td>${new Date(r.submittedAt).toLocaleString()}${r.late ? ' <span class="badge wait" style="position:static">迟交</span>' : ''}</td><td>${x ? x.auto + '/' + x.autoMax + ' · ' + G.pct(x.auto, x.autoMax) : '-'}</td><td>${x ? x.pending + ' 题' : '-'}</td><td>${total}</td><td><b>${pc}</b></td><td><span class="badge ${r.graded ? 'ok' : 'wait'}" style="position:static">${r.graded ? '已批改' : '待批改'}</span></td>`;
-        tr.onclick = () => grade(r); t.appendChild(tr);
+        const tr = $('tr', r._pending ? 'row pend' : 'row');
+        const who = `<td><b>${esc(r.name)}</b><br><span class="vi">${esc(r.email)}</span></td><td>${esc(r.cls || '-')}</td><td>${lname(lessonMap[r.lessonId] || { no: r.lessonNo })}</td>`;
+        if (r._pending) {
+          const over = r.due && Date.now() > new Date(r.due + 'T23:59:59').getTime();
+          tr.innerHTML = who + `<td>${r.due ? '截止 ' + esc(r.due) : '-'}</td><td>-</td><td>-</td><td>-</td><td>-</td><td><span class="badge todo" style="position:static">未提交</span>${over ? ' <span class="badge" style="position:static;background:#FFE3E3">已过期</span>' : ''}</td>`;
+        } else {
+          const x = r._res;
+          const sc = r.graded ? [r.finalScore, r.finalMax] : (x ? [x.total, x.max] : null);
+          const total = sc ? `${sc[0]}/${sc[1]}` : '-', pc = sc ? G.pct(sc[0], sc[1]) : '-';
+          tr.innerHTML = who + `<td>${new Date(r.submittedAt).toLocaleString()}${r.late ? ' <span class="badge wait" style="position:static">迟交</span>' : ''}</td><td>${x ? x.auto + '/' + x.autoMax + ' · ' + G.pct(x.auto, x.autoMax) : '-'}</td><td>${x ? x.pending + ' 题' : '-'}</td><td>${total}</td><td><b>${pc}</b></td><td><span class="badge ${r.graded ? 'ok' : 'wait'}" style="position:static">${r.graded ? '已批改' : '待批改'}</span></td>`;
+          tr.onclick = () => grade(r);
+        }
+        t.appendChild(tr);
       });
       wrap.innerHTML = ''; wrap.appendChild(t);
     };
     [sel, cl, st].forEach(x => x.onchange = draw); q.oninput = draw; rf.onclick = load;
     csv.onclick = () => {
       const lines = [['姓名', '邮箱', '班级', '课', '提交时间', '自动分', '手动分', '总分', '满分', '百分比', '状态', '评语']];
-      rows.filter(r => !sel.value || r.lessonId === sel.value).forEach(r => { const x = r._res || {}; const s = r.graded ? r.finalScore : x.total, m = r.graded ? r.finalMax : x.max; lines.push([r.name, r.email, r.cls || '', r.lessonNo, r.submittedAt, x.auto, x.manual, s, m, G.pct(s, m), r.graded ? '已批改' : '待批改', r.comment || '']); });
-      const blob = new Blob(['﻿' + lines.map(l => l.map(c => '"' + String(c ?? '').replace(/"/g, '""') + '"').join(',')).join('\n')], { type: 'text/csv' });
+      filtered().forEach(r => {
+        if (r._pending) { lines.push([r.name, r.email, r.cls || '', r.lessonNo, '', '', '', '', '', '', '未提交', '']); return; }
+        const x = r._res || {}; const s = r.graded ? r.finalScore : x.total, m = r.graded ? r.finalMax : x.max;
+        lines.push([r.name, r.email, r.cls || '', r.lessonNo, r.submittedAt, x.auto, x.manual, s, m, G.pct(s, m), r.graded ? '已批改' : '待批改', r.comment || '']);
+      });
+      const blob = new Blob(['\ufeff' + lines.map(l => l.map(c => '"' + String(c ?? '').replace(/"/g, '""') + '"').join(',')).join('\n')], { type: 'text/csv' });
       const a = $('a'); a.href = URL.createObjectURL(blob); a.download = 'hsk3-scores.csv'; a.click();
     };
     load();
   }
-
   // =====================================================  grading view
   async function grade(sub) {
     body.innerHTML = '<div class="card">加载中…</div>';
@@ -239,9 +262,9 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
   // =====================================================  students whitelist
   async function viewStudents() {
     body.innerHTML = ''; const card = $('div', 'card'); body.appendChild(card);
-    card.innerHTML = `<h2>学生名单 · Danh sách học sinh</h2><p class="hint">只有这里登记的 Google 邮箱才能登录做作业。每行一个:<code>邮箱, 姓名, 班级</code>。<b>班级</b>用来给不同班布置不同进度的作业(例如 <code>HSK3-A</code>),同一个学生只属于一个班。<br><span class="vi">Chỉ email trong danh sách này mới đăng nhập được. Cột lớp dùng để giao bài theo tiến độ từng lớp.</span></p>`;
+    card.innerHTML = `<h2>学生名单 · Danh sách học sinh</h2><p class="hint">只有这里登记的 Google 邮箱才能登录做作业。每行一个:<code>邮箱, 姓名, 班级</code>。<b>班级</b>用来给不同班布置不同进度的作业(例如 <code>HSK3-A</code>),同一个学生只属于一个班。<br><b>姓名</b>可以同时写越南本名和中文名,例如 <code>Trần Ngọc Hà Trang 陈玉荷庄</code>:成绩单邮件的中文行会称呼中文名,越南语行称呼本名。<br><span class="vi">Chỉ email trong danh sách này mới đăng nhập được. Cột lớp dùng để giao bài theo tiến độ từng lớp.</span></p>`;
     const list = await S.listStudents();
-    const ta = $('textarea'); ta.style.cssText = 'width:100%;min-height:260px;font-family:monospace'; ta.value = list.map(s => [s.email, s.name || '', s.cls || ''].join(', ').replace(/(, )+$/, '')).join('\n');
+    const ta = $('textarea'); ta.style.cssText = 'width:100%;min-height:260px;font-family:var(--sans);font-size:15px;line-height:1.8'; ta.value = list.map(s => [s.email, s.name || '', s.cls || ''].join(', ').replace(/(, )+$/, '')).join('\n');
     const b = $('button', 'btn', '保存名单'); b.style.marginTop = '10px';
     b.onclick = async () => {
       const out = [], seen = new Set();
