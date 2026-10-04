@@ -107,7 +107,15 @@
     async signOut() { await this._load(); await this.auth.signOut(); },
     async loadLesson(id) {
       await this._load();
-      try { const d = await this.db.collection('lessons').doc(id).get(); if (d.exists) return JSON.parse(d.data().json); } catch (e) { }
+      try {
+        const d = await this.db.collection('lessons').doc(id).get();
+        if (d.exists) {
+          const lesson = JSON.parse(d.data().json);
+          // the audio list (file names and track labels) always comes from the site's own lesson.json, so uploading the site is enough to change it
+          try { const r = await fetch(SITE_ROOT + 'lessons/' + id + '/lesson.json?v=' + Math.floor(Date.now() / 60000), { cache: 'no-cache' }); if (r.ok) { const f = await r.json(); if (f.audio) lesson.audio = f.audio; } } catch (e) { }
+          return lesson;
+        }
+      } catch (e) { }
       return j(SITE_ROOT + 'lessons/' + id + '/lesson.json');
     },
     async loadKey(id) {
@@ -192,5 +200,8 @@
     if (/<html|<!doctype/i.test(txt)) throw new Error('录音上传服务没有部署好,请联系老师。');
     throw new Error(txt || '录音上传失败');
   }
-  window.HSKStore = Object.assign(C.firebase ? fb : demo, { loadLessonFile: id => j(SITE_ROOT + 'lessons/' + id + '/lesson.json'), notify, uploadRecording, isTeacherEmail, canAutoMail: !!C.mailEndpoint });
+  window.HSKStore = Object.assign(C.firebase ? fb : demo, { loadLessonFile: async id => {      // the lesson.json file itself (fresh from the server), not the bundled data.js copy; data.js only as a fallback (file://)
+      try { const r = await fetch(SITE_ROOT + 'lessons/' + id + '/lesson.json?v=' + Date.now(), { cache: 'no-store' }); if (r.ok) return await r.json(); } catch (e) { }
+      return j(SITE_ROOT + 'lessons/' + id + '/lesson.json');
+    }, notify, uploadRecording, isTeacherEmail, canAutoMail: !!C.mailEndpoint });
 })();
