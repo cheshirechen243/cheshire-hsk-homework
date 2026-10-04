@@ -152,6 +152,151 @@
    "titleVi": "Đề thi thử HSK 3",
    "subtitle": "HSK Mock Test (Level 3)",
    "open": true
+  },
+  {
+   "id": "H1-L01",
+   "course": "HSK1",
+   "no": 1,
+   "title": "AI小语,你好!",
+   "titleVi": "AI Tiểu Ngữ, xin chào!",
+   "subtitle": "Hello, AI Xiaoyu!",
+   "open": true
+  },
+  {
+   "id": "H1-L02",
+   "course": "HSK1",
+   "no": 2,
+   "title": "我叫李文",
+   "titleVi": "Tôi tên là Lý Văn",
+   "subtitle": "My name is Li Wen",
+   "open": true
+  },
+  {
+   "id": "H1-L03",
+   "course": "HSK1",
+   "no": 3,
+   "title": "我是中国人",
+   "titleVi": "Tôi là người Trung Quốc",
+   "subtitle": "I'm Chinese",
+   "open": true
+  },
+  {
+   "id": "H1-L04",
+   "course": "HSK1",
+   "no": 4,
+   "title": "我有两个孩子",
+   "titleVi": "Tôi có hai đứa con",
+   "subtitle": "I have two children",
+   "open": true
+  },
+  {
+   "id": "H1-L05",
+   "course": "HSK1",
+   "no": 5,
+   "title": "今天我休息",
+   "titleVi": "Hôm nay tôi nghỉ",
+   "subtitle": "I'm off today",
+   "open": true
+  },
+  {
+   "id": "H1-L06",
+   "course": "HSK1",
+   "no": 6,
+   "title": "你的手机号是多少?",
+   "titleVi": "Số điện thoại của bạn là bao nhiêu?",
+   "subtitle": "What's your cell phone number?",
+   "open": true
+  },
+  {
+   "id": "H1-L07",
+   "course": "HSK1",
+   "no": 7,
+   "title": "我晚上六点半下班",
+   "titleVi": "Sáu rưỡi tối tôi tan làm",
+   "subtitle": "I'll finish work at 6:30 in the evening",
+   "open": true
+  },
+  {
+   "id": "H1-L08",
+   "course": "HSK1",
+   "no": 8,
+   "title": "我爸爸也在医院工作",
+   "titleVi": "Bố tôi cũng làm việc ở bệnh viện",
+   "subtitle": "My father also works at a hospital",
+   "open": true
+  },
+  {
+   "id": "H1-L09",
+   "course": "HSK1",
+   "no": 9,
+   "title": "我明天上午在学校学习",
+   "titleVi": "Sáng mai tôi học ở trường",
+   "subtitle": "I'll be studying at school tomorrow morning",
+   "open": true
+  },
+  {
+   "id": "H1-L10",
+   "course": "HSK1",
+   "no": 10,
+   "title": "这儿的苹果真便宜!",
+   "titleVi": "Táo ở đây rẻ thật!",
+   "subtitle": "The apples here are really affordable!",
+   "open": true
+  },
+  {
+   "id": "H1-L11",
+   "course": "HSK1",
+   "no": 11,
+   "title": "我读大学呢",
+   "titleVi": "Tôi đang học đại học",
+   "subtitle": "I'm studying at university",
+   "open": true
+  },
+  {
+   "id": "H1-L12",
+   "course": "HSK1",
+   "no": 12,
+   "title": "昨天下雪了",
+   "titleVi": "Hôm qua có tuyết rơi",
+   "subtitle": "It snowed yesterday",
+   "open": true
+  },
+  {
+   "id": "H1-L13",
+   "course": "HSK1",
+   "no": 13,
+   "title": "请给我一杯茶",
+   "titleVi": "Làm ơn cho tôi một tách trà",
+   "subtitle": "I'll have a cup of tea, please",
+   "open": true
+  },
+  {
+   "id": "H1-L14",
+   "course": "HSK1",
+   "no": 14,
+   "title": "我看了一个电影",
+   "titleVi": "Tôi đã xem một bộ phim",
+   "subtitle": "I watched a movie",
+   "open": true
+  },
+  {
+   "id": "H1-L15",
+   "course": "HSK1",
+   "no": 15,
+   "title": "大兴机场见!",
+   "titleVi": "Hẹn gặp ở sân bay Đại Hưng!",
+   "subtitle": "See you at Daxing Airport!",
+   "open": true
+  },
+  {
+   "id": "H1-MOCK",
+   "course": "HSK1",
+   "no": 16,
+   "title": "HSK(一级)模拟试卷",
+   "titleVi": "Đề thi thử HSK 1",
+   "subtitle": "HSK Mock Test (Level 1)",
+   "open": true,
+   "label": "模拟测试"
   }
  ]
 }

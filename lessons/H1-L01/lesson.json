@@ -1,0 +1,761 @@
+{
+ "id": "H1-L01",
+ "course": "HSK1",
+ "level": "HSK1",
+ "no": 1,
+ "title": "AI小语,你好!",
+ "titleVi": "AI Tiểu Ngữ, xin chào!",
+ "subtitle": "Hello, AI Xiaoyu!",
+ "audio": [
+  {
+   "label": "语音 · Phát âm",
+   "src": "../../audio/H1-L01-1.mp3"
+  },
+  {
+   "label": "听读练 · Nghe - đọc - luyện",
+   "src": "../../audio/H1-L01-2.mp3"
+  }
+ ],
+ "pages": [
+  {
+   "img": "p01.jpg",
+   "w": 1370,
+   "h": 1985
+  },
+  {
+   "img": "p02.jpg",
+   "w": 1370,
+   "h": 1985
+  },
+  {
+   "img": "p03.jpg",
+   "w": 1370,
+   "h": 1985
+  },
+  {
+   "img": "p04.jpg",
+   "w": 1370,
+   "h": 1985
+  }
+ ],
+ "fields": [
+  {
+   "id": "q1",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.1336,
+    0.3703,
+    0.0825,
+    0.0196
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": false
+  },
+  {
+   "id": "q2",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.2883,
+    0.3703,
+    0.0825,
+    0.0196
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": false
+  },
+  {
+   "id": "q3",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.4431,
+    0.3703,
+    0.0825,
+    0.0196
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": false
+  },
+  {
+   "id": "q4",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.5978,
+    0.3698,
+    0.0825,
+    0.0196
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": false
+  },
+  {
+   "id": "q5",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.7526,
+    0.3698,
+    0.0825,
+    0.0196
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": false
+  },
+  {
+   "id": "q6",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.1336,
+    0.3935,
+    0.0825,
+    0.0196
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": false
+  },
+  {
+   "id": "q7",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.2883,
+    0.3935,
+    0.0825,
+    0.0196
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": false
+  },
+  {
+   "id": "q8",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.4431,
+    0.3929,
+    0.0825,
+    0.0196
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": false
+  },
+  {
+   "id": "q9",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.5978,
+    0.3929,
+    0.0825,
+    0.0196
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": false
+  },
+  {
+   "id": "q10",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.7526,
+    0.3929,
+    0.0825,
+    0.0196
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": false
+  },
+  {
+   "id": "q11",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.1336,
+    0.4161,
+    0.0825,
+    0.0196
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": false
+  },
+  {
+   "id": "q12",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.2883,
+    0.4161,
+    0.0825,
+    0.0196
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": false
+  },
+  {
+   "id": "q13",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.4431,
+    0.4161,
+    0.0825,
+    0.0196
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": false
+  },
+  {
+   "id": "q14",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.5978,
+    0.4156,
+    0.0825,
+    0.0196
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": false
+  },
+  {
+   "id": "q15",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.7526,
+    0.4156,
+    0.0825,
+    0.0196
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": false
+  },
+  {
+   "id": "q16",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.1547,
+    0.5048,
+    0.0825,
+    0.0196
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": true
+  },
+  {
+   "id": "q17",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.3095,
+    0.5048,
+    0.0825,
+    0.0196
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": true
+  },
+  {
+   "id": "q18",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.4642,
+    0.5043,
+    0.0825,
+    0.0196
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": true
+  },
+  {
+   "id": "q19",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.619,
+    0.5043,
+    0.0818,
+    0.0196
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": true
+  },
+  {
+   "id": "q20",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.7737,
+    0.5043,
+    0.0825,
+    0.0196
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": true
+  },
+  {
+   "id": "q21",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.1547,
+    0.5275,
+    0.0825,
+    0.0196
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": true
+  },
+  {
+   "id": "q22",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.3095,
+    0.5275,
+    0.0825,
+    0.0196
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": true
+  },
+  {
+   "id": "q23",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.4642,
+    0.5275,
+    0.0825,
+    0.0196
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": true
+  },
+  {
+   "id": "q24",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.619,
+    0.5275,
+    0.0825,
+    0.0196
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": true
+  },
+  {
+   "id": "q25",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.7737,
+    0.527,
+    0.0818,
+    0.0196
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": true
+  },
+  {
+   "id": "q26",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.1547,
+    0.5506,
+    0.0825,
+    0.0196
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": true
+  },
+  {
+   "id": "q27",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.3095,
+    0.5506,
+    0.0825,
+    0.0196
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": true
+  },
+  {
+   "id": "q28",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.4642,
+    0.5501,
+    0.0818,
+    0.0196
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": true
+  },
+  {
+   "id": "q29",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.619,
+    0.5501,
+    0.0818,
+    0.0196
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": true
+  },
+  {
+   "id": "q30",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.7737,
+    0.5501,
+    0.0825,
+    0.0196
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": true
+  },
+  {
+   "id": "q31",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.1686,
+    0.6408,
+    0.0905,
+    0.0202
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": true
+  },
+  {
+   "id": "q32",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.3788,
+    0.6408,
+    0.0905,
+    0.0202
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": true
+  },
+  {
+   "id": "q33",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.5504,
+    0.6408,
+    0.0905,
+    0.0202
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": true
+  },
+  {
+   "id": "q34",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.7431,
+    0.6408,
+    0.0905,
+    0.0202
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": true
+  },
+  {
+   "id": "q35",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.1693,
+    0.662,
+    0.0905,
+    0.0202
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": true
+  },
+  {
+   "id": "q36",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.3672,
+    0.662,
+    0.0905,
+    0.0202
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": true
+  },
+  {
+   "id": "q37",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.5547,
+    0.662,
+    0.0905,
+    0.0202
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": true
+  },
+  {
+   "id": "q38",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.7292,
+    0.662,
+    0.0905,
+    0.0202
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": true
+  },
+  {
+   "id": "q39",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.1861,
+    0.6866,
+    0.0905,
+    0.0202
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": true
+  },
+  {
+   "id": "q40",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.3854,
+    0.6866,
+    0.0905,
+    0.0202
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": true
+  },
+  {
+   "id": "q41",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.5613,
+    0.6866,
+    0.0905,
+    0.0202
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": true
+  },
+  {
+   "id": "q42",
+   "type": "text",
+   "page": 4,
+   "rect": [
+    0.754,
+    0.6866,
+    0.0905,
+    0.0202
+   ],
+   "points": 1,
+   "size": "md",
+   "pinyin": true
+  },
+  {
+   "id": "q43",
+   "type": "pick",
+   "page": 4,
+   "rect": [
+    0.1358,
+    0.7869,
+    0.0299,
+    0.0207
+   ],
+   "points": 1,
+   "options": "①②③"
+  },
+  {
+   "id": "q44",
+   "type": "pick",
+   "page": 4,
+   "rect": [
+    0.3993,
+    0.7874,
+    0.0299,
+    0.0207
+   ],
+   "points": 1,
+   "options": "①②③"
+  },
+  {
+   "id": "q45",
+   "type": "pick",
+   "page": 4,
+   "rect": [
+    0.6628,
+    0.7869,
+    0.0299,
+    0.0207
+   ],
+   "points": 1,
+   "options": "①②③"
+  },
+  {
+   "id": "r1",
+   "type": "record",
+   "page": 1,
+   "rect": [
+    0.5197,
+    0.7411,
+    0.4299,
+    0.0282
+   ],
+   "points": 2,
+   "label": "朗读录音 1 · Ghi âm đọc to"
+  },
+  {
+   "id": "r2",
+   "type": "record",
+   "page": 2,
+   "rect": [
+    0.5197,
+    0.5552,
+    0.4299,
+    0.0282
+   ],
+   "points": 2,
+   "label": "朗读录音 2 · Ghi âm đọc to"
+  },
+  {
+   "id": "r3",
+   "type": "record",
+   "page": 3,
+   "rect": [
+    0.5197,
+    0.2096,
+    0.4299,
+    0.0282
+   ],
+   "points": 2,
+   "label": "朗读录音 3 · Ghi âm đọc to"
+  },
+  {
+   "id": "r4",
+   "type": "record",
+   "page": 4,
+   "rect": [
+    0.5197,
+    0.1264,
+    0.4299,
+    0.0282
+   ],
+   "points": 2,
+   "label": "朗读录音 4 · Ghi âm đọc to"
+  },
+  {
+   "id": "r5",
+   "type": "record",
+   "page": 4,
+   "rect": [
+    0.5197,
+    0.3174,
+    0.4299,
+    0.0282
+   ],
+   "points": 2,
+   "label": "朗读录音 5 · Ghi âm đọc to"
+  },
+  {
+   "id": "r6",
+   "type": "record",
+   "page": 4,
+   "rect": [
+    0.5197,
+    0.4519,
+    0.4299,
+    0.0282
+   ],
+   "points": 2,
+   "label": "朗读录音 6 · Ghi âm đọc to"
+  },
+  {
+   "id": "r7",
+   "type": "record",
+   "page": 4,
+   "rect": [
+    0.5197,
+    0.5869,
+    0.4299,
+    0.0282
+   ],
+   "points": 2,
+   "label": "朗读录音 7 · Ghi âm đọc to"
+  }
+ ]
+}
