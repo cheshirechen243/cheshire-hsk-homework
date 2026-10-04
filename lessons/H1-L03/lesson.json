@@ -8,11 +8,11 @@
  "subtitle": "I'm Chinese",
  "audio": [
   {
-   "label": "语音 · Phát âm",
+   "label": "语音 · Pronunciation",
    "src": "../../audio/H1-L03-1.mp3"
   },
   {
-   "label": "听读练 · Nghe - đọc - luyện",
+   "label": "听读练 · Listen, Read, and Practice",
    "src": "../../audio/H1-L03-2.mp3"
   }
  ],

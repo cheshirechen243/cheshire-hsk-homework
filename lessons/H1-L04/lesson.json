@@ -8,15 +8,15 @@
  "subtitle": "I have two children",
  "audio": [
   {
-   "label": "语音 · Phát âm",
+   "label": "语音 · Pronunciation",
    "src": "../../audio/H1-L04-1.mp3"
   },
   {
-   "label": "听读练 · Nghe - đọc - luyện",
+   "label": "听读练 · Listen, Read, and Practice",
    "src": "../../audio/H1-L04-2.mp3"
   },
   {
-   "label": "模拟测练 · Luyện thi",
+   "label": "模拟测练 · Simulated Practice",
    "src": "../../audio/H1-L04-3.mp3"
   }
  ],
