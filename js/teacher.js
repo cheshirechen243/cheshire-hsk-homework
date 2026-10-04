@@ -127,7 +127,7 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
       const res = G.gradeAll(lesson, { ...sub, manual: sub.manual || manual }, key);
       const cm = Object.entries(sub.comments || {}).filter(([, v]) => v).map(([k, v]) => ({ label: G.label(k), text: v }));
       return HSKMailCard.build({
-        lessonName: lname(lesson), title: lesson.title, titleVi: lesson.titleVi, student: sub.name,
+        level: lesson.level || 'HSK3', lessonName: lname(lesson), title: lesson.title, titleVi: lesson.titleVi, student: sub.name,
         final: sub.finalScore, finalMax: sub.finalMax, auto: res.auto, autoMax: res.autoMax, manual: res.manual, manualMax: res.manualMax,
         comment: sub.comment, comments: cm, link: new URL(sub.asg ? 'lesson.html?a=' + sub.asg : 'index.html', location.href).href,
         contact: `Messenger ${HSK_CONFIG.contact.messenger} · Zalo ${HSK_CONFIG.contact.zalo} · ${HSK_CONFIG.contact.email}`,
@@ -249,9 +249,25 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
       await S.saveStudents(out); toast('已保存 ' + out.length + ' 位学生 ✓');
     };
     card.append(ta, b);
+
+    // e-mail check: send a sample grade report to the teacher herself, and say exactly what went wrong if it fails
+    const mc = $('div', 'card'); body.appendChild(mc);
+    mc.innerHTML = `<h2>📧 邮件设置检查</h2><p class="hint">状态:${S.canAutoMail ? '✅ config.js 里已经填了发信地址(mailEndpoint)' : '⚠️ 还没有填发信地址,「通知学生」只会打开 Gmail 写信窗口'}<br>点下面的按钮,会发一封<b>示例成绩单</b>到你自己的邮箱 <b>${esc(user.email)}</b>,用来确认自动发信是否正常。</p>`;
+    const tb = $('button', 'btn', '发一封测试成绩单给我'); const ts = $('div', 'hint'); mc.append(tb, ts);
+    tb.onclick = async () => {
+      tb.disabled = true; ts.textContent = '发送中…';
+      try {
+        if (!window.HSKMailCard) await new Promise((res, rej) => { const s = document.createElement('script'); s.src = S.root + 'js/mailcard.js?v=' + Date.now(); s.onload = res; s.onerror = () => rej(new Error('找不到 js/mailcard.js,请上传到 js 文件夹')); document.head.appendChild(s); });
+        const c = HSKMailCard.build({ level: 'HSK3', lessonName: '第1课', title: '我们去机场接你们', titleVi: 'Chúng tôi sẽ ra sân bay đón các bạn', student: '测试 Test', final: 35, finalMax: 38, auto: 30, autoMax: 32, manual: 5, manualMax: 6, comment: '这是一封测试邮件 / Đây là thư thử.', comments: [{ label: 'Câu 28', text: 'Đặt câu đầy đủ' }], link: new URL('index.html', location.href).href, contact: `Messenger ${HSK_CONFIG.contact.messenger} · Zalo ${HSK_CONFIG.contact.zalo} · ${HSK_CONFIG.contact.email}` });
+        const r = await S.notify(user.email, '[测试] ' + c.subject, c.text, c.html, new URL('img/logo-mail.png', location.href).href);
+        ts.innerHTML = r === 'sent' ? '✅ 发送成功,请到 <b>' + esc(user.email) + '</b> 查收(也看看「垃圾邮件」)。' : '已打开 Gmail 写信窗口(未配置自动发信)。';
+      } catch (e) { ts.innerHTML = '❌ ' + esc(e.message); }
+      tb.disabled = false;
+    };
   }
 
   // =====================================================  editor entry
+
   function viewEdit() {
     body.innerHTML = ''; const card = $('div', 'card'); body.appendChild(card);
     card.innerHTML = '<h2>题目编辑器 · Soạn đề</h2><p class="hint">在 PDF 页面图上框选答题位置、设置标准答案。选一课打开编辑器。</p>';

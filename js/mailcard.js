@@ -10,7 +10,7 @@
   function build(o) {
     const pct = o.finalMax > 0 ? Math.round(o.final / o.finalMax * 100) : 0;
     const bar = Math.max(pct, 2);
-    const subject = `HSK3 ${o.lessonName} · ${o.final}/${o.finalMax} (${pct}%) — Bảng điểm / 成绩单`;
+    const subject = `Bảng điểm / 成绩单 - ${o.level || 'HSK3'} ${o.lessonName}`;
 
     const text = [
       `${o.student} 你好 / Chào ${o.student},`, '',
@@ -31,15 +31,18 @@
 <body style="margin:0;padding:0;background:${SKY};">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:${SKY};"><tr><td align="center" style="padding:26px 12px">
  <table width="560" cellpadding="0" cellspacing="0" style="width:100%;max-width:560px">
-  <tr><td align="center" style="padding:0 0 14px"><img src="{{LOGO}}" width="210" alt="沉鱼汉语 NEW HSK 3.0 COURSE" style="display:block;border:0;width:210px;max-width:60%;height:auto;margin:0 auto"></td></tr>
   <tr><td>
    <table width="100%" cellpadding="0" cellspacing="0" style="background:${CARD};border:3px solid ${INK};border-bottom-width:8px;border-radius:16px">
-    <tr><td style="padding:22px 24px 6px;font-family:${FONT}">
-      <div style="font-size:12px;font-weight:800;letter-spacing:1.5px;color:${PINKD}">成绩单 · BẢNG ĐIỂM</div>
-      <div style="font-size:22px;font-weight:800;line-height:1.3;color:${INK};margin-top:4px">${esc(o.lessonName)} · ${esc(o.title)}</div>
-      ${o.titleVi ? `<div style="font-size:14px;font-weight:600;color:${SOFT};margin-top:2px">${esc(o.titleVi)}</div>` : ''}
-    </td></tr>
-    <tr><td style="padding:10px 24px 0;font-family:${FONT};font-size:15px;line-height:1.55;color:${INK}"><b>${esc(o.student)}</b> 你好,作业已批改 🎉<br><span style="color:${SOFT}">Chào ${esc(o.student)}, bài của em đã được chấm.</span></td></tr>
+    <tr><td style="padding:18px 22px 14px;border-bottom:3px dashed ${PINK}">
+      <table width="100%" cellpadding="0" cellspacing="0"><tr>
+        <td width="104" valign="middle" style="width:104px;padding-right:14px"><img src="{{LOGO}}" width="90" height="68" alt="沉鱼汉语" style="display:block;border:0;width:90px;height:auto"></td>
+        <td valign="middle" style="font-family:${FONT}">
+          <div style="font-size:12px;font-weight:800;letter-spacing:1.5px;color:${PINKD}">成绩单 · BẢNG ĐIỂM</div>
+          <div style="font-size:20px;font-weight:800;line-height:1.3;color:${INK};margin-top:3px">${esc(o.lessonName)} · ${esc(o.title)}</div>
+          ${o.titleVi ? `<div style="font-size:13px;font-weight:600;color:${SOFT};margin-top:2px">${esc(o.titleVi)}</div>` : ''}
+        </td>
+      </tr></table>
+    </td></tr>    <tr><td style="padding:10px 24px 0;font-family:${FONT};font-size:15px;line-height:1.55;color:${INK}"><b>${esc(o.student)}</b> 你好,作业已批改 🎉<br><span style="color:${SOFT}">Chào ${esc(o.student)}, bài của em đã được chấm.</span></td></tr>
     <tr><td align="center" style="padding:16px 24px 4px;font-family:${FONT}">
       <span style="font-size:66px;font-weight:800;line-height:1;color:${INK}">${esc(o.final)}</span><span style="font-size:26px;font-weight:700;color:${SOFT}"> / ${esc(o.finalMax)}</span>
       <span style="display:inline-block;margin-left:10px;vertical-align:18px;background:${PINK};border:3px solid ${INK};border-radius:8px;padding:2px 12px;font-size:24px;font-weight:800;color:${INK}">${pct}%</span>

@@ -156,10 +156,12 @@
       const payload = JSON.stringify({ idToken, to, subject, body, html: html || '', logoUrl: logoUrl || '' });
       let res;
       try { res = await fetch(C.mailEndpoint, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: payload }); }
-      catch (e) { await fetch(C.mailEndpoint, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: payload }); return 'sent?'; }
+      catch (e) { throw new Error('连不上发信脚本。最常见原因:Apps Script 部署时「谁可以访问」没有选「任何人」,或改过脚本后没有「新版本」重新部署。'); }
       const txt = (await res.text()).trim();
-      if (txt !== 'ok') throw new Error(txt || 'mail script error');
-      return 'sent';
+      if (txt === 'ok') return 'sent';
+      if (txt === 'forbidden') throw new Error('发信脚本拒绝了这次请求:要么脚本还是旧版本(请粘贴最新的 mail-appscript.gs 并「新版本」重新部署),要么现在登录的不是老师邮箱。');
+      if (/<html|<!doctype/i.test(txt)) throw new Error('发信脚本返回了网页而不是结果:通常是部署权限不对(应选「任何人」),或脚本报错。');
+      throw new Error(txt || '发信脚本没有返回结果');
     }
     // No sender configured: open a Gmail compose window with everything filled in (a bare mailto: link just
     // opens a blank tab on computers without a mail app), and keep a copy of the text on the clipboard.
