@@ -27,7 +27,7 @@ HSKShell.boot({ need: 'student' }, async (user, main) => {
       const a = $('a', 'lcard'); a.href = s.asg ? 'lesson.html?a=' + encodeURIComponent(s.asg) : '#';
       if (!s.asg) a.classList.add('off');
       const done = s.graded;
-      a.innerHTML = `<div class="no">${L.no}</div><div class="t">${L.title}</div><div class="tv">${L.titleVi || ''}</div><div class="s">${new Date(s.submittedAt).toLocaleDateString()}${s.late ? ' · ⏰ 迟交 nộp muộn' : ''}</div>
+      a.innerHTML = `<div class="no">${L.label ? "★" : L.no}</div><div class="t">${L.title}</div><div class="tv">${L.titleVi || ''}</div><div class="s">${new Date(s.submittedAt).toLocaleDateString()}${s.late ? ' · ⏰ 迟交 nộp muộn' : ''}</div>
         <span class="badge ${done ? 'ok' : 'wait'}">${done ? '已批改 · Đã chấm ' + s.finalScore + '/' + s.finalMax + ' · ' + G.pct(s.finalScore, s.finalMax) : '已提交 · Đã nộp'}</span>`;
       grid.appendChild(a);
     });

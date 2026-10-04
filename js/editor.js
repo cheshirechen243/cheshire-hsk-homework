@@ -14,7 +14,7 @@ HSKShell.boot({ need: 'teacher', noBanner: true }, async (user, main) => {
 
   main.innerHTML = '';
   const top = $('div', 'topline'); top.style.padding = '0 16px';
-  top.innerHTML = `<div><a class="btn ghost sm" href="teacher.html">← 后台</a> <b style="font-family:var(--serif);font-size:18px">编辑 第${lesson.no}课 · ${lesson.title}</b></div>`;
+  top.innerHTML = `<div><a class="btn ghost sm" href="teacher.html">← 后台</a> <b style="font-family:var(--serif);font-size:18px">编辑 ${lname(lesson)} · ${lesson.title}</b></div>`;
   const acts = $('div', 'who'); const bPub = $('button', 'btn sm', '发布到站点'), bDl = $('button', 'btn ghost sm', '下载 JSON');
   const bImp = $('button', 'btn ghost sm', '导入答案 key.json'); const fImp = $('input'); fImp.type = 'file'; fImp.accept = '.json,application/json'; fImp.style.display = 'none';
   acts.append(bImp, fImp, bPub, bDl); top.appendChild(acts); main.appendChild(top);

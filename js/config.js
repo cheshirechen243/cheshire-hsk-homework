@@ -20,8 +20,8 @@ window.HSK_CONFIG = {
   },
 
 
-  // 批改完成后发邮件通知学生(Apps Script 网页应用地址,见 SETUP.md 第 4 步;留空则改用 mailto 链接)
-  mailEndpoint: '',
+  // 批改完成后自动发邮件通知学生:填 Apps Script 网页应用地址(步骤见 firebase/mail-appscript.gs 开头或 SETUP.md 第 4 步)。留空 = 点「通知学生」时打开 Gmail 写信窗口
+  mailEndpoint: https://script.google.com/macros/s/AKfycbw2TKV1Unh6Jp7VBl4Cm8XK3iWpV24wuI2dkIKmreevGVPeiX9-Lv02VqxnCL0-tuVfag/exec'',
   mailSecret: '',
 
   contact: {

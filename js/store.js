@@ -149,17 +149,24 @@
   };
 
   // Mail notification: Apps Script endpoint if configured, otherwise open a mailto: draft.
-  async function notify(to, subject, body) {
+  async function notify(to, subject, body, html, logoUrl) {
     if (C.mailEndpoint) {
-      await fetch(C.mailEndpoint, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ secret: C.mailSecret, to, subject, body }) });
+      // the teacher's Firebase login token goes along, so the Apps Script can check who is asking
+      let idToken = ''; try { idToken = await firebase.auth().currentUser.getIdToken(); } catch (e) { }
+      const payload = JSON.stringify({ idToken, to, subject, body, html: html || '', logoUrl: logoUrl || '' });
+      let res;
+      try { res = await fetch(C.mailEndpoint, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: payload }); }
+      catch (e) { await fetch(C.mailEndpoint, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: payload }); return 'sent?'; }
+      const txt = (await res.text()).trim();
+      if (txt !== 'ok') throw new Error(txt || 'mail script error');
       return 'sent';
     }
     // No sender configured: open a Gmail compose window with everything filled in (a bare mailto: link just
     // opens a blank tab on computers without a mail app), and keep a copy of the text on the clipboard.
-    try { navigator.clipboard && navigator.clipboard.writeText(body); } catch (e) { }
+    try { navigator.clipboard && navigator.clipboard.writeText(body).catch(() => { }); } catch (e) { }
     window.open('https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(to) + '&su=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body), '_blank');
     return 'gmail';
   }
 
-  window.HSKStore = Object.assign(C.firebase ? fb : demo, { notify, isTeacherEmail });
+  window.HSKStore = Object.assign(C.firebase ? fb : demo, { notify, isTeacherEmail, canAutoMail: !!C.mailEndpoint });
 })();

@@ -55,5 +55,8 @@
     t.appendChild(extra || $('span')); t.appendChild(who); return t;
   }
 
+  // display name of a lesson: 第N课, or its own label (e.g. the mock test)
+  window.lname = L => (L && L.label) || ('第' + (L && L.no) + '课');
+
   window.HSKShell = { boot, topline, $ };
 })();

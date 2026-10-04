@@ -22,7 +22,7 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
     body.innerHTML = ''; const card = $('div', 'card'); body.appendChild(card);
     card.innerHTML = '<h2>学生提交 · Bài nộp</h2>';
     const ctl = $('div', 'row-ctl'); card.appendChild(ctl);
-    const sel = $('select'); sel.innerHTML = '<option value="">全部课 Tất cả</option>' + lessons.filter(l => l.open).map(l => `<option value="${l.id}">第${l.no}课 ${l.title}</option>`).join('');
+    const sel = $('select'); sel.innerHTML = '<option value="">全部课 Tất cả</option>' + lessons.filter(l => l.open).map(l => `<option value="${l.id}">${lname(l)} ${l.title}</option>`).join('');
     const st = $('select'); st.innerHTML = '<option value="">全部状态</option><option value="todo">待批改</option><option value="done">已批改</option>';
     const q = $('input'); q.type = 'text'; q.placeholder = '搜索姓名/邮箱';
     const cl = $('select'); cl.innerHTML = '<option value="">全部班级</option>';
@@ -47,7 +47,7 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
         const x = r._res; const tr = $('tr', 'row');
         const sc = r.graded ? [r.finalScore, r.finalMax] : (x ? [x.total, x.max] : null);
         const total = sc ? `${sc[0]}/${sc[1]}` : '-', pc = sc ? G.pct(sc[0], sc[1]) : '-';
-        tr.innerHTML = `<td><b>${esc(r.name)}</b><br><span class="vi">${esc(r.email)}</span></td><td>${esc(r.cls || '-')}</td><td>第${r.lessonNo || ''}课</td><td>${new Date(r.submittedAt).toLocaleString()}${r.late ? ' <span class="badge wait" style="position:static">迟交</span>' : ''}</td><td>${x ? x.auto + '/' + x.autoMax + ' · ' + G.pct(x.auto, x.autoMax) : '-'}</td><td>${x ? x.pending + ' 题' : '-'}</td><td>${total}</td><td><b>${pc}</b></td><td><span class="badge ${r.graded ? 'ok' : 'wait'}" style="position:static">${r.graded ? '已批改' : '待批改'}</span></td>`;
+        tr.innerHTML = `<td><b>${esc(r.name)}</b><br><span class="vi">${esc(r.email)}</span></td><td>${esc(r.cls || '-')}</td><td>${lname(lessonMap[r.lessonId] || { no: r.lessonNo })}</td><td>${new Date(r.submittedAt).toLocaleString()}${r.late ? ' <span class="badge wait" style="position:static">迟交</span>' : ''}</td><td>${x ? x.auto + '/' + x.autoMax + ' · ' + G.pct(x.auto, x.autoMax) : '-'}</td><td>${x ? x.pending + ' 题' : '-'}</td><td>${total}</td><td><b>${pc}</b></td><td><span class="badge ${r.graded ? 'ok' : 'wait'}" style="position:static">${r.graded ? '已批改' : '待批改'}</span></td>`;
         tr.onclick = () => grade(r); t.appendChild(tr);
       });
       wrap.innerHTML = ''; wrap.appendChild(t);
@@ -70,7 +70,7 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
     body.innerHTML = '';
     const head = $('div', 'card'); body.appendChild(head);
     const back = $('button', 'btn ghost sm', '← 返回列表'); back.onclick = () => show('subs');
-    head.innerHTML = `<h2>${esc(sub.name)} · 第${lesson.no}课 ${esc(lesson.title)}</h2><div class="vi">${esc(sub.email)} · 提交于 ${new Date(sub.submittedAt).toLocaleString()}</div>`;
+    head.innerHTML = `<h2>${esc(sub.name)} · ${lname(lesson)} ${esc(lesson.title)}</h2><div class="vi">${esc(sub.email)} · 提交于 ${new Date(sub.submittedAt).toLocaleString()}</div>`;
     head.prepend(back); back.style.marginBottom = '8px';
     const lay = $('div', 'grade-layout'); body.appendChild(lay);
     const left = $('div'); const side = $('div', 'grade-side card'); lay.append(left, side);
@@ -118,22 +118,44 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
     const row = $('div', 'row-ctl'); row.style.marginTop = '8px';
     const save = $('button', 'btn', '保存并标记已批改'); const mail = $('button', 'btn ghost', '✉ 通知学生'); const re = $('button', 'btn ghost sm', '让学生重做');
     row.append(save, mail, re); foot.append(ov, row);
-    save.onclick = async () => {
+    // with the Apps Script mail sender configured, saving the grade also e-mails the student automatically
+    let autoBox = null;
+    if (S.canAutoMail) { const lb = $('label', null, '<input type="checkbox" checked> 保存后自动邮件通知学生'); lb.style.cssText = 'display:block;margin-top:8px;font-size:13px;font-weight:700'; autoBox = lb.querySelector('input'); foot.appendChild(lb); }
+    // the designed grade-report e-mail (HTML + plain-text fallback), built from the saved grade
+    const card = () => {
+      const res = G.gradeAll(lesson, { ...sub, manual: sub.manual || manual }, key);
+      const cm = Object.entries(sub.comments || {}).filter(([, v]) => v).map(([k, v]) => ({ label: G.label(k), text: v }));
+      return HSKMailCard.build({
+        lessonName: lname(lesson), title: lesson.title, titleVi: lesson.titleVi, student: sub.name,
+        final: sub.finalScore, finalMax: sub.finalMax, auto: res.auto, autoMax: res.autoMax, manual: res.manual, manualMax: res.manualMax,
+        comment: sub.comment, comments: cm, link: new URL(sub.asg ? 'lesson.html?a=' + sub.asg : 'index.html', location.href).href,
+        contact: `Messenger ${HSK_CONFIG.contact.messenger} · Zalo ${HSK_CONFIG.contact.zalo} · ${HSK_CONFIG.contact.email}`,
+      });
+    };
+    const logoUrl = new URL('img/logo-mail.png', location.href).href;
+    const preview = $('button', 'btn ghost sm', '👁 预览成绩单邮件'); row.appendChild(preview);
+    preview.onclick = () => {
+      if (!sub.graded) { toast('请先保存批改'); return; }
+      const ov = $('div', 'modal-ov'); const m = $('div', 'modal wide'); m.style.maxWidth = '640px';
+      m.innerHTML = '<div class="modal-h"><b>成绩单邮件预览</b><button class="x" type="button">✕</button></div>';
+      const fr = $('iframe'); fr.style.cssText = 'width:100%;height:70vh;border:2px solid var(--outline);border-radius:10px;margin-top:8px;background:#fff';
+      fr.srcdoc = card().html.replace('{{LOGO}}', logoUrl); m.appendChild(fr); ov.appendChild(m); document.body.appendChild(ov);
+      const close = () => ov.remove(); m.querySelector('.x').onclick = close; ov.onclick = e => { if (e.target === ov) close(); };
+    };
+    const sendMail = async () => {
+      const c = card();
+      try {
+        const r = await S.notify(sub.email, c.subject, c.text, c.html, logoUrl);
+        toast(r === 'sent' ? '成绩单邮件已发送 ✓' : r === 'sent?' ? '已发出请求(无法确认,请让学生查收)' : '已打开 Gmail 写信窗口(纯文字版),检查后点「发送」');
+      } catch (e) { alert('邮件没有发出:' + e.message + '\n\n请检查 config.js 的 mailEndpoint 和 Apps Script 部署(见 SETUP.md 第 4 步)。'); }
+    };    save.onclick = async () => {
       const res = G.gradeAll(lesson, { ...sub, manual }, key);
       if (res.pending && !confirm(`还有 ${res.pending} 题没打分,仍然标记为已批改吗?`)) return;
       const g = { manual, comments, comment: overall, graded: true, finalScore: res.total, finalMax: res.max };
       await S.saveGrade(sub.lessonId, sub.email, g); Object.assign(sub, g); toast('已保存 ✓'); draw();
+      if (autoBox && autoBox.checked) await sendMail();
     };
-    mail.onclick = async () => {
-      if (!sub.graded) { toast('请先保存批改'); return; }
-      const pc = G.pct(sub.finalScore, sub.finalMax);
-      const subj = `HSK3 第${lesson.no}课作业成绩 / Điểm bài tập bài ${lesson.no}: ${sub.finalScore}/${sub.finalMax} (${pc})`;
-      const lines = [`${sub.name} 你好 / Chào ${sub.name},`, '', `第${lesson.no}课《${lesson.title}》作业已批改。`, `Bài tập bài ${lesson.no} đã được chấm.`, '', `分数 Điểm: ${sub.finalScore} / ${sub.finalMax} (${pc})`];
-      if (overall) lines.push('', '老师评语 Nhận xét:', overall);
-      lines.push('', '登录查看详细批改 / Đăng nhập để xem chi tiết: ' + new URL(sub.asg ? 'lesson.html?a=' + sub.asg : 'index.html', location.href).href, '', '沉鱼汉语');
-      const r = await S.notify(sub.email, subj, lines.join('\n')); toast(r === 'sent' ? '邮件已发送 ✓' : '已打开 Gmail 写信窗口,检查后点「发送」(内容也已复制)');
-    };
-    re.onclick = async () => { if (!confirm('删除这份提交,让学生重新做?此操作不能撤销。')) return; await S.reopen(sub.lessonId, sub.email); toast('已删除'); show('subs'); };
+    mail.onclick = async () => { if (!sub.graded) { toast('请先保存批改'); return; } await sendMail(); };    re.onclick = async () => { if (!confirm('删除这份提交,让学生重新做?此操作不能撤销。')) return; await S.reopen(sub.lessonId, sub.email); toast('已删除'); show('subs'); };
   }
 
   // =====================================================  assignments: one lesson -> one class -> one link
@@ -144,7 +166,7 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
     const students = await S.listStudents().catch(() => []);
     const classes = classesOf(students);
     const form = $('div', 'row-ctl'); form.style.marginTop = '12px'; card.appendChild(form);
-    const ls = $('select'); ls.innerHTML = lessons.filter(l => l.open).map(l => `<option value="${l.id}">第${l.no}课 ${esc(l.title)}</option>`).join('');
+    const ls = $('select'); ls.innerHTML = lessons.filter(l => l.open).map(l => `<option value="${l.id}">${lname(l)} ${esc(l.title)}</option>`).join('');
     const cs = $('select'); cs.innerHTML = '<option value="">全部班级 · tất cả lớp</option>' + classes.map(c => `<option>${esc(c)}</option>`).join('');
     const ci = $('input'); ci.type = 'text'; ci.placeholder = '或直接输入班级名'; ci.style.width = '140px';
     const due = $('input'); due.type = 'date'; due.title = '截止日期(可选)';
@@ -163,7 +185,7 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
         const L = lessonMap[a.lessonId] || { no: '?', title: a.lessonId };
         const n = subs.filter(s => s.asg === a.code).length;
         const tr = $('tr');
-        tr.innerHTML = `<td><b>第${L.no}课</b><br><span class="vi">${esc(L.title)}</span></td><td>${esc(a.cls || '全部')}</td><td>${a.due || '-'}</td><td>${n}</td><td></td><td><div class="linkrow"><input type="text" readonly value="${link(a.code)}"><button class="btn sm" type="button">复制</button></div></td><td></td>`;
+        tr.innerHTML = `<td><b>${lname(L)}</b><br><span class="vi">${esc(L.title)}</span></td><td>${esc(a.cls || '全部')}</td><td>${a.due || '-'}</td><td>${n}</td><td></td><td><div class="linkrow"><input type="text" readonly value="${link(a.code)}"><button class="btn sm" type="button">复制</button></div></td><td></td>`;
         const stc = tr.children[4]; const tog = $('button', 'btn sm ' + (a.open === false ? 'ghost' : 'blue'), a.open === false ? '已关闭 · 点击开放' : '开放中 · 点击关闭');
         tog.onclick = async () => { a.open = a.open === false; await S.saveAssignment(a); toast(a.open ? '已开放' : '已关闭'); draw(); }; stc.appendChild(tog);
         const inp = tr.querySelector('input'); inp.onfocus = () => inp.select();
@@ -202,7 +224,28 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
   function viewEdit() {
     body.innerHTML = ''; const card = $('div', 'card'); body.appendChild(card);
     card.innerHTML = '<h2>题目编辑器 · Soạn đề</h2><p class="hint">在 PDF 页面图上框选答题位置、设置标准答案。选一课打开编辑器。</p>';
-    lessons.filter(l => l.open).forEach(l => { const a = $('a', 'btn', `编辑 第${l.no}课`); a.href = 'editor.html?l=' + l.id; a.style.marginRight = '8px'; card.appendChild(a); });
+    const wrap = $('div'); wrap.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-top:8px'; card.appendChild(wrap);
+    lessons.filter(l => l.open).forEach(l => { const a = $('a', 'btn sm', `编辑 ${lname(l)}`); a.href = 'editor.html?l=' + l.id; wrap.appendChild(a); });
+
+    // publish every lesson's answers in one go: pick all files of private/keys/ (L01.json … MOCK.json)
+    const bulk = $('div', 'howto'); bulk.style.marginTop = '16px';
+    bulk.innerHTML = '<b>📤 批量发布答案</b><br>把<b>本机</b> <code>private/keys</code> 文件夹里的全部答案文件(L01.json … MOCK.json)一次选中,题目和答案会一起发布到站点。<br><span class="vi">答案只存进你的 Firestore,不会出现在公开的网站文件里。</span><br>';
+    const fi = $('input'); fi.type = 'file'; fi.multiple = true; fi.accept = '.json,application/json'; fi.style.display = 'none';
+    const go = $('button', 'btn', '选择答案文件并发布'); go.style.marginTop = '8px'; const st = $('div', 'hint');
+    go.onclick = () => fi.click();
+    fi.onchange = async () => {
+      const files = [...fi.files]; if (!files.length) return; let ok = 0; const fail = [];
+      for (const f of files) {
+        const id = f.name.replace(/\.json$/i, '');
+        try {
+          st.textContent = `发布中 ${ok + fail.length + 1}/${files.length}: ${id} …`;
+          const key = JSON.parse(await f.text()); const lesson = await S.loadLesson(id);
+          await S.publishLesson(lesson, key); ok++;
+        } catch (e) { fail.push(id + '(' + e.message + ')'); }
+      }
+      st.innerHTML = `✅ 已发布 ${ok} 课` + (fail.length ? `<br>❌ 失败:${fail.join('、')}` : ''); fi.value = '';
+    };
+    bulk.append(go, fi, st); card.appendChild(bulk);
   }
 
   show('subs');

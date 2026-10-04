@@ -17,7 +17,7 @@ HSKShell.boot({ need: 'student', noBanner: true }, async (user, main) => {
   else return block('请用老师发的作业链接进入', 'Hãy mở bài tập bằng link cô gửi trong Google Classroom.');
   let lesson;
   try { lesson = await S.loadLesson(id); } catch (e) { main.innerHTML = '<div class="card">找不到这一课 · Không tìm thấy bài này</div>'; return; }
-  document.title = '第' + lesson.no + '课 · HSK3';
+  document.title = lname(lesson) + ' · HSK3';
   const base = S.lessonUrl(id);
   const draftKey = 'hsk3.draft.' + user.email + '.' + id;
   const loadDraft = () => { try { return JSON.parse(localStorage.getItem(draftKey)) || {}; } catch (e) { return {}; } };
@@ -39,7 +39,7 @@ HSKShell.boot({ need: 'student', noBanner: true }, async (user, main) => {
 
   const bar = $('div', 'lesson-bar'); const inn = $('div', 'in'); bar.appendChild(inn);
   const back = $('a', 'btn ghost sm', '← 课程 Bài học'); back.href = 'index.html'; inn.appendChild(back);
-  inn.appendChild($('div', 'ttl', `<span class="no">${lesson.no}</span><span>${lesson.title}<small>${lesson.titleVi || ''}</small></span>`));
+  inn.appendChild($('div', 'ttl', `<span class="no">${lesson.label ? "★" : lesson.no}</span><span>${lesson.title}<small>${lesson.titleVi || ''}</small></span>`));
   const prog = $('span', 'prog'); inn.appendChild(prog);
   // submit lives in the top bar so no screen space is taken from the worksheet
   const submitTop = $('button', 'btn seal sm', '✔ 提交 · Nộp bài'); submitTop.type = 'button'; if (!locked) inn.appendChild(submitTop);
@@ -68,7 +68,7 @@ HSKShell.boot({ need: 'student', noBanner: true }, async (user, main) => {
   const info = $('div', 'card info');
   const due = asg && asg.due ? new Date(asg.due + 'T23:59:59') : null;
   const isLate = !!due && Date.now() > due.getTime();
-  info.innerHTML = `<h2>第${lesson.no}课 · ${lesson.title}</h2><div class="vi">${lesson.titleVi || ''}${lesson.subtitle ? ' · ' + lesson.subtitle : ''}</div>` +
+  info.innerHTML = `<h2>${lname(lesson)} · ${lesson.title}</h2><div class="vi">${lesson.titleVi || ''}${lesson.subtitle ? ' · ' + lesson.subtitle : ''}</div>` +
     (asg ? `<div class="asgline">👥 ${asg.cls ? esc(asg.cls) : '全部班级 Tất cả'}${asg.due ? ` · ⏰ 截止 Hạn nộp: <b${isLate && !locked ? ' style="color:var(--bad)"' : ''}>${asg.due}</b>${isLate && !locked ? ' (已过期 · quá hạn,vẫn nộp được nhưng sẽ ghi là nộp muộn)' : ''}` : ''}</div>` : '') +
     (locked ? '' : '<p class="hint">在每一页的答题框里直接作答。✍ 按钮可以练习笔顺。作业会自动保存在这台设备上,做完后点右上角「提交」。<br><span class="vi">Làm bài trực tiếp trong các ô trả lời trên từng trang. Nút ✍ để luyện thứ tự nét. Bài được tự lưu trên thiết bị này; làm xong bấm “Nộp bài” ở góc trên bên phải.</span></p>');
   const inner = $('div', 'scroll-inner'); inner.appendChild(info); inner.appendChild(pagesWrap); scroller.appendChild(inner);
