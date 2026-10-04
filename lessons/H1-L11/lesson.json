@@ -8,11 +8,11 @@
  "subtitle": "I'm studying at university",
  "audio": [
   {
-   "label": "语音 · Phát âm",
+   "label": "语音 · Pronunciation",
    "src": "../../audio/H1-L11-1.mp3"
   },
   {
-   "label": "模拟测练 · Luyện thi",
+   "label": "模拟测练 · Simulated Practice",
    "src": "../../audio/H1-L11-3.mp3"
   }
  ],
