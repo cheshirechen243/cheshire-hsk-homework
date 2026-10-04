@@ -137,8 +137,9 @@
         const sel = (opts_answer(page, f.id) || {});
         f.options.forEach(o => {
           const isKey = key && key[f.id] === o.v;
-          if (sel.v === o.v) put('mark', right ? '✅' : '❌', o.rect[0] + o.rect[2], o.rect[1]);
-          else if (isKey && !right) put('mark', '✅', o.rect[0] + o.rect[2], o.rect[1]);
+          const mc = 'mark' + (o.rect[3] < 0.03 ? ' sm' : '');                                  // tight options (syllable pairs, short words): small icon
+          if (sel.v === o.v) put(mc, right ? '✅' : '❌', o.rect[0] + o.rect[2], o.rect[1]);
+          else if (isKey && !right) put(mc, '✅', o.rect[0] + o.rect[2], o.rect[1]);
         });
       } else {
         put('mark', right ? '✅' : '❌', f.rect[0] + f.rect[2], f.rect[1]);

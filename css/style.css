@@ -318,3 +318,8 @@ body.rec-open .scroller { padding-bottom: 190px; }
 .card + .card { margin-top: 16px; }
 
 .lvhead.again { margin-top: 26px; }
+
+.mark.sm { font-size: max(9px, 1.5cqw); transform: translate(-30%, -62%); }
+.scroller.hide-tags .mark { display: none; }
+.tbl input.inl { padding: 3px 6px; font: inherit; font-size: 13px; width: 130px; }
+.tbl input.inl[type=date] { width: 138px; }

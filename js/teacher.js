@@ -240,6 +240,7 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
     form.append(ls, cs, ci, $('span', 'vi', '截止:'), due, add);
     if (!classes.length) card.appendChild($('p', 'hint', '还没有班级:先去「学生名单」给每个学生填班级(每行:邮箱, 姓名, 班级)。'));
     const wrap = $('div'); wrap.style.cssText = 'margin-top:12px;overflow-x:auto'; card.appendChild(wrap);
+    const dl = $('datalist'); dl.id = 'clslist'; dl.innerHTML = classes.map(c => `<option value="${esc(c)}">`).join(''); card.appendChild(dl);
     const code = () => Array.from(crypto.getRandomValues(new Uint8Array(6)), b => 'abcdefghjkmnpqrstuvwxyz23456789'[b % 31]).join('');
     const link = a => new URL('l/' + a.lessonId + '.html?a=' + a.code, location.href).href;   // l/<lesson>.html is a stub with the lesson's own <title> (so Classroom shows "I-4 我有两个孩子") that forwards to lesson.html
     const draw = async () => {
@@ -255,10 +256,13 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
         const missing = roster.filter(s => !submitted.has(s.email));
         const n = roster.length ? `<b>${roster.length - missing.length}</b> / ${roster.length}` : `${subs.filter(s => s.asg === a.code).length}`;
         const tr = $('tr');
-        tr.innerHTML = `<td class="wrapok"><b>${lcode(L)}</b><br><span class="vi">${esc(L.title)}</span></td><td>${esc(a.cls || '全部')}</td><td>${a.due || '-'}</td><td>${n}</td><td></td><td><div class="linkrow"><input type="text" readonly value="${link(a)}"><button class="btn sm" type="button">复制</button></div><div class="linkrow" style="margin-top:6px"><input type="text" class="cru" placeholder="Classroom 作业网址(可选)" value="${esc(a.classroomUrl || '')}"></div></td>`;
+        tr.innerHTML = `<td class="wrapok"><b>${lcode(L)}</b><br><span class="vi">${esc(L.title)}</span></td><td><input type="text" class="inl cls" list="clslist" placeholder="全部班级" value="${esc(a.cls || '')}" title="班级(留空 = 全部班级)"></td><td><input type="date" class="inl due" value="${esc(a.due || '')}" title="截止日期"></td><td>${n}</td><td></td><td><div class="linkrow"><input type="text" readonly value="${link(a)}"><button class="btn sm" type="button">复制</button></div><div class="linkrow" style="margin-top:6px"><input type="text" class="cru" placeholder="Classroom 作业网址(可选)" value="${esc(a.classroomUrl || '')}"></div></td>`;
         const stc = tr.children[4]; const tog = $('button', 'btn sm ' + (a.open === false ? 'ghost' : 'blue'), a.open === false ? '关闭' : '开放'); tog.title = a.open === false ? '现在已关闭,点击重新开放' : '现在开放中,点击关闭';
         tog.onclick = async () => { a.open = a.open === false; await S.saveAssignment(a); toast(a.open ? '已开放' : '已关闭'); draw(); }; stc.append(tog, ' ');
-        const inp = tr.querySelector('input'); inp.onfocus = () => inp.select();
+        const inp = tr.querySelector('.linkrow input'); inp.onfocus = () => inp.select();
+        const saveField = async (k, v, msg) => { a[k] = v; await S.saveAssignment(a); toast(msg); draw(); };
+        tr.querySelector('.cls').onchange = e => saveField('cls', e.target.value.trim(), '班级已保存 ✓');
+        tr.querySelector('.due').onchange = e => saveField('due', e.target.value, e.target.value ? '截止日期已保存 ✓' : '已清除截止日期');
         // optional: the Classroom post's address. Students then get a "back to Classroom" button after they submit.
         const cru = tr.querySelector('.cru');
         cru.onchange = async () => { a.classroomUrl = cru.value.trim(); await S.saveAssignment(a); toast(a.classroomUrl ? 'Classroom 网址已保存 ✓' : '已清除'); };
@@ -266,8 +270,10 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
           const mb = $('button', 'btn ghost sm', `未交名单 (${missing.length})`); mb.style.marginTop = '6px'; mb.style.display = 'block'; tr.children[3].appendChild(mb);
           mb.onclick = () => {
             const ov = $('div', 'modal-ov'); const m = $('div', 'modal'); m.style.maxWidth = '520px';
-            const names = missing.map(s => s.name || s.email).join(', '); const due = a.due ? ` (hạn / 截止: ${a.due})` : '';
-            const msg = `Chào cả lớp 👋 Bài "${L.titleVi || L.title}" (${lcode(L)}) các bạn sau chưa nộp: ${names}${due}\nLink: ${link(a)}\n\n大家好!${lcode(L)}《${L.title}》还没交的同学:${names}${a.due ? '(截止 ' + a.due + ')' : ''}\n链接:${link(a)}`;
+            const nm = s => (window.HSKMailCard ? HSKMailCard.splitName(s.name || s.email) : { zh: s.name || s.email, vi: s.name || s.email });
+            const viNames = missing.map(s => nm(s).vi).join(', '), zhNames = missing.map(s => nm(s).zh).join(', ');
+            const crs = L.course || 'HSK3', mock = !!L.label, N = missing.length;
+            const msg = `Hi cả lớp 👋 Btvn ${mock ? 'bài thi thử' : 'bài ' + L.no} (${crs}) có ${N} bạn chưa nộp: ${viNames}${a.due ? ` (hạn chót: ${a.due})` : ''}\nLink: ${link(a)}\n\n嗨! ${crs}${mock ? '模拟测试' : '第' + L.no + '课'}作业有${N}位还没交的同学: ${zhNames}${a.due ? `(截止 ${a.due})` : ''}\n链接: ${link(a)}`;
             m.innerHTML = `<div class="modal-h"><b>未交名单 · ${lcode(L)} · ${esc(a.cls || '全部')}</b><button class="x" type="button">✕</button></div>`;
             const ul = $('div'); ul.style.cssText = 'margin:8px 0;max-height:200px;overflow:auto;border:2px solid var(--outline);border-radius:8px;background:#fff;padding:6px 10px';
             ul.innerHTML = missing.map(s => `<div>${esc(s.name || '')} <span class="vi">${esc(s.email)}</span></div>`).join('');
