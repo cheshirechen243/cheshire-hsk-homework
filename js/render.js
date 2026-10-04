@@ -1,6 +1,7 @@
 // Renders a lesson's PDF pages with interactive answer fields laid over them.
 // Field rects are stored as fractions (0-1) of the page image, so they scale with any screen.
 (function () {
+  const G_label = id => (window.HSKGrade ? HSKGrade.label(id) : id);
   const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
   const pct = r => `left:${r[0] * 100}%;top:${r[1] * 100}%;width:${r[2] * 100}%;height:${r[3] * 100}%`;
   let pop = null;
@@ -88,7 +89,7 @@
           requestAnimationFrame(() => setupCanvas(c, val && val.img, locked, v => set(v ? { img: v } : ''), f));
           if (!locked) { const b = el('button', 'draw-clear', '↺'); b.type = 'button'; b.title = '清除 / Xoá'; b.onclick = e => { e.stopPropagation(); c._clear(); }; d.appendChild(b); }
         }
-        if (res && opts.mode === 'review') addMarks(page, f, res, opts.key, pg);
+        if (res && opts.mode === 'review') addMarks(page, f, res, opts.key, pg, opts.comments);
         if (opts.onField) opts.onField(f, page);
       });
     });
@@ -96,8 +97,21 @@
   }
 
   // ✅ / ❌ badge on the field's top-right corner; wrong fill-ins also get the right answer above the box.
-  function addMarks(page, f, res, key, pg) {
+  function addMarks(page, f, res, key, pg, comments) {
     const put = (cls, html, left, top) => { const d = el('div', cls, html); d.style.left = left * 100 + '%'; d.style.top = top * 100 + '%'; page.appendChild(d); return d; };
+    // teacher's per-question comment: a note under the question (hidden together with the answer hints)
+    const note = comments && comments[f.id];
+    const isRight = res.auto && (res.correct || (res.overridden && res.points >= f.points));
+    const wrongBelow = f.type === 'hanzi' && res.auto && !isRight && key && key[f.id] != null && (f.tag || 'below') === 'below';
+    let row = null;
+    if (note) {
+      const rs = f.type === 'choice' ? f.options.map(o => o.rect) : [f.rect];
+      const x = Math.min(...rs.map(r => r[0])), yb = Math.max(...rs.map(r => r[1] + r[3]));
+      const d = put('cmt', '💬 ' + String(note).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])), x, yb);
+      d.title = G_label(f.id);
+      // a wrong hanzi also gets the right-answer tag under its box: put tag and note side by side in one row
+      if (wrongBelow) { row = put('fixrow', '', x, yb); d.style.left = d.style.top = ''; row.appendChild(d); }
+    }
     if (res.auto) {
       const right = res.correct || (res.overridden && res.points >= f.points);
       if (f.type === 'choice') {
@@ -115,7 +129,7 @@
           // where the hint goes, so it never covers the ✅/❌ corner badge, the pinyin or the neighbouring text
           const pos = f.tag || (f.type === 'pick' ? 'left' : f.type === 'hanzi' ? 'below' : 'above');
           if (pos === 'left') put('fix-tag left', txt, f.rect[0] - .006, f.rect[1] + f.rect[3] / 2);
-          else if (pos === 'below') put('fix-tag below', txt, f.rect[0], f.rect[1] + f.rect[3]);
+          else if (pos === 'below') { if (row) { const tg = el('div', 'fix-tag below', txt); row.insertBefore(tg, row.firstChild); } else put('fix-tag below', txt, f.rect[0], f.rect[1] + f.rect[3]); }
           else put('fix-tag above', txt, f.rect[0] + f.rect[2], f.rect[1]);   // right-aligned: the corner badge stays visible
         }
       }

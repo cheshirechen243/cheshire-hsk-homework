@@ -49,5 +49,8 @@
   // "81%" (integer, 0 when max is 0)
   const pct = (a, b) => (b > 0 ? Math.round((a / b) * 100) : 0) + '%';
 
-  window.HSKGrade = { norm, isAuto, gradeField, gradeAll, filled, pct };
+  // field id -> student-facing label: q28 -> "Câu 28", x3 -> "Điền từ 3"
+  const label = id => { const m = String(id).match(/^([a-z]+)(\d+)$/i); if (!m) return String(id).toUpperCase(); return (m[1].toLowerCase() === 'x' ? 'Điền từ ' : 'Câu ') + m[2]; };
+
+  window.HSKGrade = { norm, isAuto, gradeField, gradeAll, filled, pct, label };
 })();

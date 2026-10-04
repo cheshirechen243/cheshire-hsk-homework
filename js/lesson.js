@@ -57,8 +57,8 @@ HSKShell.boot({ need: 'student', noBanner: true }, async (user, main) => {
   zOut.title = '缩小 Thu nhỏ'; zIn.title = '放大 Phóng to'; zPct.title = '恢复 100% · Về 100%'; zFit.title = '适合宽度 · Vừa chiều rộng';
   [zOut, zPct, zIn, zFit].forEach(b => { b.type = 'button'; zoomBox.appendChild(b); });
   row2.appendChild(zoomBox);
-  const tipBtn = $('button', 'btn sm blue', '💡 答案提示 Gợi ý đáp án ✓'); tipBtn.type = 'button'; tipBtn.style.display = locked ? '' : 'none';
-  tipBtn.onclick = () => { const h = scrollerHideToggle(); tipBtn.textContent = h ? '💡 答案提示 Gợi ý đáp án ✗' : '💡 答案提示 Gợi ý đáp án ✓'; };
+  const tipBtn = $('button', 'btn sm blue', '💡 答案和评语 Đáp án & nhận xét ✓'); tipBtn.type = 'button'; tipBtn.style.display = locked ? '' : 'none';
+  tipBtn.onclick = () => { const h = scrollerHideToggle(); tipBtn.textContent = h ? '💡 答案和评语 Đáp án & nhận xét ✗' : '💡 答案和评语 Đáp án & nhận xét ✓'; };
   row2.appendChild(tipBtn);
   zoomBox.title = '放大后可按住鼠标拖动 · Phóng to rồi giữ chuột kéo để di chuyển';
 
@@ -112,7 +112,7 @@ HSKShell.boot({ need: 'student', noBanner: true }, async (user, main) => {
 
   function drawResult() {
     const results = key ? G.gradeAll(lesson, sub, key) : null;
-    HSKRender.renderLesson(pagesWrap, lesson, { base, answers, mode: 'review', results: results ? results.fields : {}, key, showAnswers: !!key, onChange });
+    HSKRender.renderLesson(pagesWrap, lesson, { base, answers, mode: 'review', results: results ? results.fields : {}, key, showAnswers: !!key, comments: sub.comments || {}, onChange });
     return results;
   }
 
@@ -130,7 +130,7 @@ HSKShell.boot({ need: 'student', noBanner: true }, async (user, main) => {
     if (!res) h += '<div class="cm">⏳ 老师还没有发布这一课的答案,分数稍后显示。<br><span class="vi">Cô chưa đăng đáp án của bài này, điểm sẽ hiển thị sau.</span></div>';
     if (sub.comment) h +=`<div class="cm"><b>老师评语 Nhận xét:</b> ${esc(sub.comment)}</div>`;
     const cs = sub.comments ? Object.entries(sub.comments).filter(([, v]) => v) : [];
-    if (cs.length) h += '<div class="cm">' + cs.map(([k, v]) => `<div>· <b>${k.toUpperCase()}</b> ${esc(v)}</div>`).join('') + '</div>';
+    if (cs.length) h += '<div class="cm">' + cs.map(([k, v]) => `<div>· <b>${G.label(k)}:</b> ${esc(v)}</div>`).join('') + '</div>';
     d.innerHTML = h; info.appendChild(d);
   }
 

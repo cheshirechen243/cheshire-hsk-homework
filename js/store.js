@@ -154,8 +154,11 @@
       await fetch(C.mailEndpoint, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ secret: C.mailSecret, to, subject, body }) });
       return 'sent';
     }
-    window.open('mailto:' + encodeURIComponent(to) + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body));
-    return 'mailto';
+    // No sender configured: open a Gmail compose window with everything filled in (a bare mailto: link just
+    // opens a blank tab on computers without a mail app), and keep a copy of the text on the clipboard.
+    try { navigator.clipboard && navigator.clipboard.writeText(body); } catch (e) { }
+    window.open('https://mail.google.com/mail/?view=cm&fs=1&to=' + encodeURIComponent(to) + '&su=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body), '_blank');
+    return 'gmail';
   }
 
   window.HSKStore = Object.assign(C.firebase ? fb : demo, { notify, isTeacherEmail });

@@ -131,7 +131,7 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
       const lines = [`${sub.name} 你好 / Chào ${sub.name},`, '', `第${lesson.no}课《${lesson.title}》作业已批改。`, `Bài tập bài ${lesson.no} đã được chấm.`, '', `分数 Điểm: ${sub.finalScore} / ${sub.finalMax} (${pc})`];
       if (overall) lines.push('', '老师评语 Nhận xét:', overall);
       lines.push('', '登录查看详细批改 / Đăng nhập để xem chi tiết: ' + new URL(sub.asg ? 'lesson.html?a=' + sub.asg : 'index.html', location.href).href, '', '沉鱼汉语');
-      const r = await S.notify(sub.email, subj, lines.join('\n')); toast(r === 'sent' ? '邮件已发送 ✓' : '已打开邮件草稿');
+      const r = await S.notify(sub.email, subj, lines.join('\n')); toast(r === 'sent' ? '邮件已发送 ✓' : '已打开 Gmail 写信窗口,检查后点「发送」(内容也已复制)');
     };
     re.onclick = async () => { if (!confirm('删除这份提交,让学生重新做?此操作不能撤销。')) return; await S.reopen(sub.lessonId, sub.email); toast('已删除'); show('subs'); };
   }

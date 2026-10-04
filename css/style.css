@@ -160,6 +160,8 @@ body.lesson-body { overflow: hidden; }
 .fix-tag.left { transform: translate(-100%, -50%); margin-top: 0; }
 .fix-tag.below { transform: none; margin-top: 3px; }
 .fix-tag.above { transform: translate(-100%, -100%); margin-top: -3px; }
+.cmt { position: absolute; z-index: 7; margin-top: 4px; max-width: 46cqw; background: var(--yellow); color: var(--ink); border: 2px solid var(--outline); border-radius: 8px; padding: .3cqw 1cqw; font: 700 max(11px, 1.9cqw)/1.35 var(--sans); box-shadow: 0 2px 0 rgba(61,55,96,.3); pointer-events: none; }
+.scroller.hide-tags .cmt { display: none; }
 .scroller.hide-tags .fix-tag:not(.score):not(.wait) { display: none; }
 .pick-pop { position: fixed; z-index: 100; background: #fff; border: 3px solid var(--outline); border-radius: 12px; box-shadow: 0 5px 0 rgba(61,55,96,.35); padding: 8px; display: flex; gap: 6px; flex-wrap: wrap; max-width: 290px; }
 .pick-letter { width: 46px; height: 46px; border-radius: 8px; border: 2.5px solid var(--outline); background: #fff; font: 700 21px var(--head); color: var(--ink); cursor: pointer; box-shadow: 0 3px 0 var(--outline); }
@@ -242,3 +244,5 @@ table.tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
 /* pixel face only for digits / single letters (Vietnamese diacritics render badly in it) */
 .bigscore b, .bigscore em, .sc b, .sc .pc, .prog b, .lcard .no, .lesson-bar .ttl .no, .f-pick .f-val, .pick-letter, .zoom .pctbtn, .bigtotal, .bigtotal em, .page-no { font-family: var(--pix); }
 .btn, .tab, .tbl th, .modal-h, .card h1, .card h2, .toast { font-weight: 800; }
+.fixrow { position: absolute; z-index: 7; display: flex; gap: .8cqw; align-items: flex-start; margin-top: 3px; }
+.fixrow .fix-tag, .fixrow .cmt { position: static; transform: none; margin: 0; }
