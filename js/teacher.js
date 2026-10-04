@@ -74,18 +74,17 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
       const cnt = { none: 0, todo: 0, done: 0 }; f.forEach(r => cnt[statusOf(r)]++);
       sum.innerHTML = f.length ? `共 ${f.length} 人 · <b>未提交 ${cnt.none}</b> · 待批改 ${cnt.todo} · 已批改 ${cnt.done}` : '';
       if (!f.length) { wrap.innerHTML = '<p class="hint">还没有内容。先到「学生名单」登记学生,再在「布置作业」生成班级链接。</p>'; return; }
-      const t = $('table', 'tbl'); t.innerHTML = '<tr><th>学生</th><th>班级</th><th>课</th><th>提交时间</th><th>自动分</th><th>待批改</th><th>总分</th><th>百分比</th><th>状态</th></tr>';
+      const t = $('table', 'tbl'); t.innerHTML = '<tr><th>学生</th><th>班级</th><th>课</th><th>提交时间</th><th>自动分</th><th>待批改</th><th>状态</th></tr>';
       f.forEach(r => {
         const tr = $('tr', r._pending ? 'row pend' : 'row');
-        const who = `<td><b>${esc(r.name)}</b><br><span class="vi">${esc(r.email)}</span></td><td>${esc(r.cls || '-')}</td><td>${lname(lessonMap[r.lessonId] || { no: r.lessonNo })}</td>`;
+        const who = `<td><b>${esc(r.name)}</b><br><span class="vi">${esc(r.email)}</span></td><td>${esc(r.cls || '-')}</td><td><b>${lcode(lessonMap[r.lessonId] || { no: r.lessonNo })}</b></td>`;
         if (r._pending) {
           const over = r.due && Date.now() > new Date(r.due + 'T23:59:59').getTime();
-          tr.innerHTML = who + `<td>${r.due ? '截止 ' + esc(r.due) : '-'}</td><td>-</td><td>-</td><td>-</td><td>-</td><td><span class="badge todo" style="position:static">未提交</span>${over ? ' <span class="badge" style="position:static;background:#FFE3E3">已过期</span>' : ''}</td>`;
+          tr.innerHTML = who + `<td>${r.due ? '截止 ' + esc(r.due) : '-'}</td><td>-</td><td>-</td><td><span class="badge todo" style="position:static">未提交</span>${over ? ' <span class="badge" style="position:static;background:#FFE3E3">已过期</span>' : ''}</td>`;
         } else {
           const x = r._res;
-          const sc = r.graded ? [r.finalScore, r.finalMax] : (x ? [x.total, x.max] : null);
-          const total = sc ? `${sc[0]}/${sc[1]}` : '-', pc = sc ? G.pct(sc[0], sc[1]) : '-';
-          tr.innerHTML = who + `<td>${new Date(r.submittedAt).toLocaleString()}${r.late ? ' <span class="badge wait" style="position:static">迟交</span>' : ''}</td><td>${x ? x.auto + '/' + x.autoMax + ' · ' + G.pct(x.auto, x.autoMax) : '-'}</td><td>${x ? x.pending + ' 题' : '-'}</td><td>${total}</td><td><b>${pc}</b></td><td><span class="badge ${r.graded ? 'ok' : 'wait'}" style="position:static">${r.graded ? '已批改' : '待批改'}</span></td>`;
+          const d = new Date(r.submittedAt), tm = `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+          tr.innerHTML = who + `<td>${tm}${r.late ? ' <span class="badge wait" style="position:static">迟交</span>' : ''}</td><td>${x ? x.auto + '/' + x.autoMax + ' · ' + G.pct(x.auto, x.autoMax) : '-'}</td><td>${x ? x.pending + ' 题' : '-'}</td><td><span class="badge ${r.graded ? 'ok' : 'wait'}" style="position:static">${r.graded ? '已批改' : '待批改'}</span></td>`;
           tr.onclick = () => grade(r);
         }
         t.appendChild(tr);
@@ -242,12 +241,12 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
     if (!classes.length) card.appendChild($('p', 'hint', '还没有班级:先去「学生名单」给每个学生填班级(每行:邮箱, 姓名, 班级)。'));
     const wrap = $('div'); wrap.style.cssText = 'margin-top:12px;overflow-x:auto'; card.appendChild(wrap);
     const code = () => Array.from(crypto.getRandomValues(new Uint8Array(6)), b => 'abcdefghjkmnpqrstuvwxyz23456789'[b % 31]).join('');
-    const link = c => new URL('lesson.html?a=' + c, location.href).href;
+    const link = a => new URL('l/' + a.lessonId + '.html?a=' + a.code, location.href).href;   // l/<lesson>.html is a stub with the lesson's own <title> (so Classroom shows "I-4 我有两个孩子") that forwards to lesson.html
     const draw = async () => {
       const list = (await S.listAssignments()).filter(a => inLevel(a.lessonId)).sort((a, b) => (b.created || '').localeCompare(a.created || ''));
       const subs = await S.listSubmissions().catch(() => []);
       if (!list.length) { wrap.innerHTML = '<p class="hint">还没有布置过作业。</p>'; return; }
-      const t = $('table', 'tbl'); t.innerHTML = '<tr><th>课</th><th>班级</th><th>截止</th><th>进度(已交/全班)</th><th>状态</th><th>学生链接(贴到 Classroom)</th><th></th></tr>';
+      const t = $('table', 'tbl'); t.innerHTML = '<tr><th>课</th><th>班级</th><th>截止</th><th>进度(已交/全班)</th><th>状态</th><th>学生链接(贴到 Classroom)</th></tr>';
       list.forEach(a => {
         const L = lessonMap[a.lessonId] || { no: '?', title: a.lessonId };
         // progress against the class roster (students list), matched by lesson so a re-issued link still counts
@@ -256,9 +255,9 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
         const missing = roster.filter(s => !submitted.has(s.email));
         const n = roster.length ? `<b>${roster.length - missing.length}</b> / ${roster.length}` : `${subs.filter(s => s.asg === a.code).length}`;
         const tr = $('tr');
-        tr.innerHTML = `<td><b>${lname(L)}</b><br><span class="vi">${esc(L.title)}</span></td><td>${esc(a.cls || '全部')}</td><td>${a.due || '-'}</td><td>${n}</td><td></td><td><div class="linkrow"><input type="text" readonly value="${link(a.code)}"><button class="btn sm" type="button">复制</button></div><div class="linkrow" style="margin-top:6px"><input type="text" class="cru" placeholder="Classroom 作业网址(可选)" value="${esc(a.classroomUrl || '')}"></div></td><td></td>`;
-        const stc = tr.children[4]; const tog = $('button', 'btn sm ' + (a.open === false ? 'ghost' : 'blue'), a.open === false ? '已关闭 · 点击开放' : '开放中 · 点击关闭');
-        tog.onclick = async () => { a.open = a.open === false; await S.saveAssignment(a); toast(a.open ? '已开放' : '已关闭'); draw(); }; stc.appendChild(tog);
+        tr.innerHTML = `<td class="wrapok"><b>${lcode(L)}</b><br><span class="vi">${esc(L.title)}</span></td><td>${esc(a.cls || '全部')}</td><td>${a.due || '-'}</td><td>${n}</td><td></td><td><div class="linkrow"><input type="text" readonly value="${link(a)}"><button class="btn sm" type="button">复制</button></div><div class="linkrow" style="margin-top:6px"><input type="text" class="cru" placeholder="Classroom 作业网址(可选)" value="${esc(a.classroomUrl || '')}"></div></td>`;
+        const stc = tr.children[4]; const tog = $('button', 'btn sm ' + (a.open === false ? 'ghost' : 'blue'), a.open === false ? '关闭' : '开放'); tog.title = a.open === false ? '现在已关闭,点击重新开放' : '现在开放中,点击关闭';
+        tog.onclick = async () => { a.open = a.open === false; await S.saveAssignment(a); toast(a.open ? '已开放' : '已关闭'); draw(); }; stc.append(tog, ' ');
         const inp = tr.querySelector('input'); inp.onfocus = () => inp.select();
         // optional: the Classroom post's address. Students then get a "back to Classroom" button after they submit.
         const cru = tr.querySelector('.cru');
@@ -268,8 +267,8 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
           mb.onclick = () => {
             const ov = $('div', 'modal-ov'); const m = $('div', 'modal'); m.style.maxWidth = '520px';
             const names = missing.map(s => s.name || s.email).join(', '); const due = a.due ? ` (hạn / 截止: ${a.due})` : '';
-            const msg = `Chào cả lớp 👋 Bài "${L.titleVi || L.title}" (${lname(L)}) các bạn sau chưa nộp: ${names}${due}\nLink: ${link(a.code)}\n\n大家好!${lname(L)}《${L.title}》还没交的同学:${names}${a.due ? '(截止 ' + a.due + ')' : ''}\n链接:${link(a.code)}`;
-            m.innerHTML = `<div class="modal-h"><b>未交名单 · ${lname(L)} · ${esc(a.cls || '全部')}</b><button class="x" type="button">✕</button></div>`;
+            const msg = `Chào cả lớp 👋 Bài "${L.titleVi || L.title}" (${lcode(L)}) các bạn sau chưa nộp: ${names}${due}\nLink: ${link(a)}\n\n大家好!${lcode(L)}《${L.title}》还没交的同学:${names}${a.due ? '(截止 ' + a.due + ')' : ''}\n链接:${link(a)}`;
+            m.innerHTML = `<div class="modal-h"><b>未交名单 · ${lcode(L)} · ${esc(a.cls || '全部')}</b><button class="x" type="button">✕</button></div>`;
             const ul = $('div'); ul.style.cssText = 'margin:8px 0;max-height:200px;overflow:auto;border:2px solid var(--outline);border-radius:8px;background:#fff;padding:6px 10px';
             ul.innerHTML = missing.map(s => `<div>${esc(s.name || '')} <span class="vi">${esc(s.email)}</span></div>`).join('');
             const ta = $('textarea'); ta.value = msg; ta.style.cssText = 'width:100%;min-height:130px';
@@ -279,8 +278,8 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
             const close = () => ov.remove(); m.querySelector('.x').onclick = close; ov.onclick = e => { if (e.target === ov) close(); };
           };
         }
-        tr.querySelector('.linkrow .btn').onclick = async () => { try { await navigator.clipboard.writeText(link(a.code)); } catch (e) { inp.select(); document.execCommand('copy'); } toast('链接已复制 ✓'); };
-        const del = $('button', 'btn ghost sm', '删除'); del.onclick = async () => { if (!confirm('删除这个链接?已交的作业不会被删除,但学生将无法再用这个链接打开。')) return; await S.deleteAssignment(a.code); draw(); }; tr.lastChild.appendChild(del);
+        tr.querySelector('.linkrow .btn').onclick = async () => { try { await navigator.clipboard.writeText(link(a)); } catch (e) { inp.select(); document.execCommand('copy'); } toast('链接已复制 ✓'); };
+        const del = $('button', 'btn ghost sm', '删除'); del.onclick = async () => { if (!confirm('删除这个链接?已交的作业不会被删除,但学生将无法再用这个链接打开。')) return; await S.deleteAssignment(a.code); draw(); }; stc.appendChild(del);
         t.appendChild(tr);
       });
       wrap.innerHTML = ''; wrap.appendChild(t);
@@ -330,8 +329,10 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
   function viewEdit() {
     body.innerHTML = ''; const card = $('div', 'card'); body.appendChild(card);
     card.innerHTML = '<h2>题目编辑器 · Soạn đề</h2><p class="hint">在 PDF 页面图上框选答题位置、设置标准答案。选一课打开编辑器。</p>';
-    const wrap = $('div'); wrap.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-top:8px'; card.appendChild(wrap);
-    levelLessons().forEach(l => { const a = $('a', 'btn sm', `编辑 ${lname(l)}`); a.href = 'editor.html?l=' + l.id; wrap.appendChild(a); });
+    const wrap = $('div', 'row-ctl'); wrap.style.marginTop = '8px'; card.appendChild(wrap);
+    const es = $('select'); es.innerHTML = lessonOpts();
+    const eb = $('a', 'btn', '编辑 · Soạn'); const setHref = () => { eb.href = 'editor.html?l=' + encodeURIComponent(es.value); }; es.onchange = setHref; setHref();
+    wrap.append(es, eb);
 
     // publish every lesson's answers in one go: pick all files of private/keys/ (L01.json … MOCK.json)
     const bulk = $('div', 'howto'); bulk.style.marginTop = '16px';

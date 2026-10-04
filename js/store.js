@@ -43,6 +43,7 @@
     // assignments = a lesson handed to one class; students only get in through its link (?a=CODE)
     async getAssignment(code) { return lsGet('hsk3.demo.asg', {})[code] || null; },
     async listAssignments() { return Object.values(lsGet('hsk3.demo.asg', {})); },
+    async listForClass(cls) { return Object.values(lsGet('hsk3.demo.asg', {})).filter(a => a.open !== false && (!a.cls || String(a.cls).toLowerCase() === String(cls || '').toLowerCase())); },
     async saveAssignment(a) { const all = lsGet('hsk3.demo.asg', {}); all[a.code] = a; lsSet('hsk3.demo.asg', all); },
     async deleteAssignment(code) { const all = lsGet('hsk3.demo.asg', {}); delete all[code]; lsSet('hsk3.demo.asg', all); },
     async listMine(email) { return Object.values(lsGet('hsk3.demo.subs', {})).filter(s => s.email === email); },
@@ -131,6 +132,12 @@
     async listMine(email) { await this._load(); const q = await this.db.collection('submissions').where('email', '==', email).get(); return q.docs.map(d => d.data()); },
     async getAssignment(code) { await this._load(); const d = await this.db.collection('assignments').doc(code).get(); return d.exists ? d.data() : null; },
     async listAssignments() { await this._load(); const q = await this.db.collection('assignments').get(); return q.docs.map(d => d.data()); },
+    // what a student can start: the open assignments of their own class (+ those for every class); two equality queries so the security rules can verify them
+    async listForClass(cls) {
+      await this._load(); const col = this.db.collection('assignments'); const out = {};
+      for (const c of new Set([cls || '', ''])) { try { (await col.where('cls', '==', c).get()).docs.forEach(d => { const a = d.data(); if (a.open !== false) out[a.code] = a; }); } catch (e) { } }
+      return Object.values(out);
+    },
     async saveAssignment(a) { await this._load(); await this.db.collection('assignments').doc(a.code).set(a); },
     async deleteAssignment(code) { await this._load(); await this.db.collection('assignments').doc(code).delete(); },
     async saveGrade(lessonId, email, g) {
