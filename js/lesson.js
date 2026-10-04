@@ -17,7 +17,7 @@ HSKShell.boot({ need: 'student', noBanner: true }, async (user, main) => {
   else return block('请用老师发的作业链接进入', 'Hãy mở bài tập bằng link cô gửi trong Google Classroom.');
   let lesson;
   try { lesson = await S.loadLesson(id); } catch (e) { main.innerHTML = '<div class="card">找不到这一课 · Không tìm thấy bài này</div>'; return; }
-  document.title = lname(lesson) + ' · HSK3';
+  document.title = lname(lesson) + ' · 沉鱼汉语';
   const base = S.lessonUrl(id);
   const draftKey = 'hsk3.draft.' + user.email + '.' + id;
   const loadDraft = () => { try { return JSON.parse(localStorage.getItem(draftKey)) || {}; } catch (e) { return {}; } };
@@ -49,6 +49,11 @@ HSKShell.boot({ need: 'student', noBanner: true }, async (user, main) => {
   if (lesson.audio && lesson.audio.length) {
     const ab = $('div', 'audiobox', '<span>🎧 听力 Nghe</span>');
     const au = $('audio'); au.controls = true; au.preload = 'none'; au.src = base + lesson.audio[0].src; ab.appendChild(au);
+    if (lesson.audio.length > 1) {                 // e.g. HSK1: 语音 / 听读练 / 模拟测练 each have their own recording
+      const tsel = $('select', 'tracksel'); tsel.innerHTML = lesson.audio.map((a, i) => `<option value="${i}">${a.label}</option>`).join('');
+      tsel.onchange = () => { const rate = au.playbackRate; au.src = base + lesson.audio[+tsel.value].src; au.playbackRate = rate; };
+      ab.insertBefore(tsel, au);
+    }
     const sp = $('div', 'seg'); [['0.8×', .8], ['1×', 1]].forEach(([t, v]) => { const b = $('button', v === 1 ? 'on' : '', t); b.type = 'button'; b.title = '语速 Tốc độ'; b.onclick = () => { au.playbackRate = v; [...sp.children].forEach(x => x.classList.remove('on')); b.classList.add('on'); }; sp.appendChild(b); });
     ab.appendChild(sp); row2.appendChild(ab);
   }
@@ -70,6 +75,7 @@ HSKShell.boot({ need: 'student', noBanner: true }, async (user, main) => {
   const isLate = !!due && Date.now() > due.getTime();
   info.innerHTML = `<h2>${lname(lesson)} · ${lesson.title}</h2><div class="vi">${lesson.titleVi || ''}${lesson.subtitle ? ' · ' + lesson.subtitle : ''}</div>` +
     (asg ? `<div class="asgline">👥 ${asg.cls ? esc(asg.cls) : '全部班级 Tất cả'}${asg.due ? ` · ⏰ 截止 Hạn nộp: <b${isLate && !locked ? ' style="color:var(--bad)"' : ''}>${asg.due}</b>${isLate && !locked ? ' (已过期 · quá hạn,vẫn nộp được nhưng sẽ ghi là nộp muộn)' : ''}` : ''}</div>` : '') +
+    (!locked && lesson.fields.some(f => f.pinyin) ? '<div class="howto" style="margin-top:8px">⌨️ <b>拼音怎么打 · Cách gõ pinyin</b>:<br><span class="vi">Gõ chữ + số thanh (1-4), ü gõ là <b>v</b>, bấm <b>Enter</b> sẽ tự đổi thành pinyin. VD: <b>nve4</b> → <b>nüè</b>, <b>lao3</b> → <b>lǎo</b>. <br>Sau j q x y, ü chỉ viết u (gõ u hoặc v đều được): <b>xve2</b> → <b>xué</b>.</span></div>' : '') +
     (locked ? '' : '<p class="hint">在每一页的答题框里直接作答。✍ 按钮可以练习笔顺。作业会自动保存在这台设备上,做完后点右上角「提交」。<br><span class="vi">Làm bài trực tiếp trong các ô trả lời trên từng trang. Nút ✍ để luyện thứ tự nét. Bài được tự lưu trên thiết bị này; làm xong bấm “Nộp bài” ở góc trên bên phải.</span></p>');
   const inner = $('div', 'scroll-inner'); inner.appendChild(info); inner.appendChild(pagesWrap); scroller.appendChild(inner);
   shellEl.appendChild(bar); shellEl.appendChild(scroller);
@@ -162,6 +168,14 @@ HSKShell.boot({ need: 'student', noBanner: true }, async (user, main) => {
       btn.disabled = true; btn.textContent = '提交中… Đang nộp…';
       try {
         const clean = {}; Object.entries(answers).forEach(([k, v]) => { if (v !== '' && v != null) clean[k] = v; });
+        // voice answers go to the teacher's Google Drive first; the submission only keeps their file ids
+        const recs = Object.entries(clean).filter(([, v]) => v && v.rec && v.rec.data);
+        for (let i = 0; i < recs.length; i++) {
+          btn.textContent = `上传录音 ${i + 1}/${recs.length}… · Đang tải bản ghi`;
+          const [fid, v] = recs[i]; const r = await S.uploadRecording(id, fid, v.rec);
+          if (r.id) clean[fid] = { rec: { id: r.id, mime: v.rec.mime, dur: v.rec.dur, name: v.rec.name } };
+        }
+        btn.textContent = '提交中… Đang nộp…';
         sub = await S.submit({ lessonId: id, email: user.email, name: user.name, cls: user.cls || '', asg: asg ? asg.code : '', late: !!isLate, answers: clean, lessonNo: lesson.no });
         try { localStorage.removeItem(draftKey); } catch (e) { }
         key = await S.loadKey(id).catch(() => null);

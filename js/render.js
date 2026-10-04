@@ -70,9 +70,10 @@
           if (!locked) d.onclick = () => openPick(d, f, val, v => { set(v); t.textContent = v; d.classList.toggle('empty', !v); opts.rerender && opts.rerender(); });
           refs[f.id] = d;
         } else if (f.type === 'text' || f.type === 'hanzi') {
-          const d = mk(f.rect, 'f-text ' + (f.type === 'hanzi' ? 'hanzi' : (f.size || 'md')));
+          const d = mk(f.rect, 'f-text ' + (f.type === 'hanzi' ? 'hanzi' : (f.size || 'md')) + (f.pinyin ? ' pyn' : ''));
           const i = el('input'); i.type = 'text'; i.value = val || ''; i.disabled = locked; i.autocomplete = 'off'; i.setAttribute('autocapitalize', 'off'); i.spellcheck = false;
           if (f.type === 'hanzi') i.maxLength = 2;
+          if (f.pinyin && !locked && window.HSKPinyin) HSKPinyin.attach(i);
           i.oninput = () => { set(i.value); opts.rerender && opts.rerender(); };
           d.appendChild(i);
           if (f.type === 'hanzi' && !locked && window.HSKStroke) {
@@ -88,6 +89,24 @@
           const d = mk(f.rect, 'f-draw'); const c = el('canvas'); d.appendChild(c);
           requestAnimationFrame(() => setupCanvas(c, val && val.img, locked, v => set(v ? { img: v } : ''), f));
           if (!locked) { const b = el('button', 'draw-clear', '↺'); b.type = 'button'; b.title = '清除 / Xoá'; b.onclick = e => { e.stopPropagation(); c._clear(); }; d.appendChild(b); }
+        } else if (f.type === 'record') {
+          // voice answer: the box turns into a mic button; the recording lives in answers[f.id].rec
+          const d = mk(f.rect, 'f-rec' + (val && val.rec ? ' has' : '')); const btn = el('button', 'rec-btn'); btn.type = 'button'; d.appendChild(btn);
+          const paint = v => {
+            const rc = v && v.rec;
+            d.classList.toggle('has', !!rc);
+            btn.innerHTML = rc ? `<span class="ic">✅</span><span>${locked ? '已交录音' : '已录音'} ${rc.dur ? Math.floor(rc.dur / 60) + ':' + String(rc.dur % 60).padStart(2, '0') : ''}<small>${locked ? 'Đã nộp bản ghi' : 'Bấm để nghe / ghi lại'}</small></span>` : '<span class="ic">🎤</span><span>点这里录音<small>Bấm để ghi âm</small></span>';
+          };
+          paint(val);
+          btn.onclick = () => {
+            const cur = answers[f.id];
+            if (locked) { if (cur && cur.rec && cur.rec.data) { const a = new Audio(cur.rec.data); a.play(); } return; }
+            if (!window.HSKRecorder) { alert('录音模块没有加载,请刷新页面'); return; }
+            HSKRecorder.open({ label: f.label || '朗读录音 · Ghi âm đọc to' }, cur && cur.rec, r => {
+              const v = r ? { rec: { data: r.data, mime: r.mime, dur: r.dur, name: r.name } } : '';
+              set(v); paint(v); opts.rerender && opts.rerender();
+            });
+          };
         }
         if (res && opts.mode === 'review') addMarks(page, f, res, opts.key, pg, opts.comments);
         if (opts.onField) opts.onField(f, page);

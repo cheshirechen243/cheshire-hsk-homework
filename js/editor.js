@@ -9,7 +9,7 @@ HSKShell.boot({ need: 'teacher', noBanner: true }, async (user, main) => {
   const base = S.lessonUrl(id);
 
   let pg = 1, sel = null /* {fid, oi} */, tool = 'select', dirty = false;
-  const TYPES = { select: '选择/移动', choice: '选项题(点选项)', pick: '字母框(A-F)', text: '填空(打字)', hanzi: '写汉字', essay: '造句(老师批)', draw: '手写区' };
+  const TYPES = { select: '选择/移动', choice: '选项题(点选项)', pick: '字母框(A-F)', text: '填空(打字)', hanzi: '写汉字', essay: '造句(老师批)', draw: '手写区', record: '录音题(学生朗读)' };
   const field = fid => lesson.fields.find(f => f.id === fid);
 
   main.innerHTML = '';
@@ -88,7 +88,8 @@ HSKShell.boot({ need: 'teacher', noBanner: true }, async (user, main) => {
         const f = { id: nextId(), type: 'choice', page: pg, points: 1, options: [{ v: 'A', rect }] }; lesson.fields.push(f); sel = { fid: f.id, oi: 0 }; tool = 'addopt';
         [...tools.children].forEach(x => x.classList.toggle('on', x.dataset.k === 'addopt')); toast('继续框 B、C 选项;完成后点「选择/移动」');
       } else {
-        const f = { id: nextId(), type: tool, page: pg, rect, points: tool === 'essay' ? 2 : tool === 'draw' ? 0 : 1 };
+        const f = { id: nextId(), type: tool, page: pg, rect, points: tool === 'essay' || tool === 'record' ? 2 : tool === 'draw' ? 0 : 1 };
+        if (tool === 'record') f.label = '朗读录音 · Ghi âm đọc to';
         if (tool === 'pick') f.options = 'ABC'; if (tool === 'text') f.size = 'md';
         lesson.fields.push(f); sel = { fid: f.id, oi: -1 };
       }
@@ -123,7 +124,9 @@ HSKShell.boot({ need: 'teacher', noBanner: true }, async (user, main) => {
         row('选项字母', inp(f.options.map(o => o.v).join(''), v => { v.toUpperCase().split('').forEach((c, i) => { if (f.options[i]) f.options[i].v = c; }); }));
         const del1 = $('button', 'btn ghost sm', '删除选中的选项'); del1.onclick = delSel; side.appendChild(del1);
       }
-      if (f.type !== 'essay' && f.type !== 'draw') {
+      if (f.type === 'text') { const c = $('input'); c.type = 'checkbox'; c.checked = !!f.pinyin; c.onchange = () => { f.pinyin = c.checked; dirty = true; }; const w = $('label', null, ''); w.appendChild(c); w.appendChild(document.createTextNode(' 弹出拼音小键盘(带声调)')); row('键盘', w); }
+      if (f.type === 'record') row('提示文字', inp(f.label || '', v => f.label = v));
+      if (f.type !== 'essay' && f.type !== 'draw' && f.type !== 'record') {
         const a = Array.isArray(key[f.id]) ? key[f.id].join('/') : (key[f.id] ?? '');
         row('标准答案', inp(a, v => { if (v === '') delete key[f.id]; else key[f.id] = (f.type === 'text' || f.type === 'hanzi') && v.includes('/') ? v.split('/').map(s => s.trim()).filter(Boolean) : (f.type === 'choice' || f.type === 'pick' ? v.toUpperCase() : v); }));
         side.appendChild($('div', 'hint', f.type === 'text' ? '多个可接受答案用 / 分隔,如:男人/女人/年轻人' : '')).style.fontSize = '12px';

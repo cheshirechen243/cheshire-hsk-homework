@@ -9,12 +9,31 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
 
   const tabs = $('div', 'tabs'); const body = $('div'); main.appendChild(tabs); main.appendChild(body);
   const T = { subs: '作业批改', assign: '布置作业 / 班级链接', students: '学生名单', edit: '题目编辑器' };
-  const show = k => { [...tabs.children].forEach(b => b.classList.toggle('on', b.dataset.k === k)); ({ subs: viewSubs, assign: viewAssign, students: viewStudents, edit: viewEdit })[k](); };
+  // one level (HSK1 / HSK3 ...) at a time: pick the level first, then everything below only shows that level
+  const courseOf = l => (l && l.course) || 'HSK3';
+  let curTab = 'subs', curLevel = '';
+  const show = k => { curTab = k; [...tabs.children].forEach(b => b.classList.toggle('on', b.dataset.k === k)); lvBar.style.display = k === 'students' ? 'none' : ''; ({ subs: viewSubs, assign: viewAssign, students: viewStudents, edit: viewEdit })[k](); };
+  // a student's voice answer: Drive preview player for uploaded files (the teacher owns them), <audio> for local demo data
+  const recPlayer = rc => {
+    const dur = rc.dur ? ` <span class="vi">${Math.floor(rc.dur / 60)}:${String(rc.dur % 60).padStart(2, '0')}</span>` : '';
+    if (rc.id) return `🎤${dur}<br><iframe src="https://drive.google.com/file/d/${encodeURIComponent(rc.id)}/preview" style="width:100%;height:64px;border:2px solid var(--outline);border-radius:8px;background:#fff" allow="autoplay"></iframe><a href="https://drive.google.com/file/d/${encodeURIComponent(rc.id)}/view" target="_blank" rel="noopener" style="font-size:12px">在 Google Drive 打开 · Mở trong Drive</a>`;
+    if (rc.data) return `🎤${dur}<br><audio controls src="${rc.data}" style="width:100%"></audio>`;
+    return '<i>(录音丢失)</i>';
+  };  // lessons grouped by course (HSK1 / HSK3) for the drop-downs
+  const levelLessons = () => lessons.filter(l => l.open && courseOf(l) === curLevel);
+  const lessonOpts = () => levelLessons().map(l => `<option value="${l.id}">${lshort(l)} ${esc(l.title)}</option>`).join('');
   const classesOf = list => [...new Set(list.map(s => (s.cls || '').trim()).filter(Boolean))].sort();
   Object.entries(T).forEach(([k, v]) => { const b = $('button', 'tab', v); b.dataset.k = k; b.onclick = () => show(k); tabs.appendChild(b); });
 
   const lessons = await S.listLessons().catch(() => []);
   const lessonMap = Object.fromEntries(lessons.map(l => [l.id, l]));
+  const inLevel = id => courseOf(lessonMap[id]) === curLevel;
+  // level switcher bar (built once; remembers the last level)
+  const levels = [...new Set(lessons.filter(l => l.open).map(courseOf))].sort();
+  curLevel = levels.includes(localStorage.getItem('hsk3.level')) ? localStorage.getItem('hsk3.level') : (levels[0] || 'HSK3');
+  const lvBar = $('div', 'lvbar'); lvBar.innerHTML = '<span>等级 · Cấp độ</span>';
+  levels.forEach(lv => { const b = $('button', 'lvbtn' + (lv === curLevel ? ' on' : ''), lv); b.type = 'button'; b.onclick = () => { curLevel = lv; try { localStorage.setItem('hsk3.level', lv); } catch (e) { } [...lvBar.querySelectorAll('.lvbtn')].forEach(x => x.classList.toggle('on', x === b)); show(curTab); }; lvBar.appendChild(b); });
+  main.insertBefore(lvBar, tabs);
   const cache = {};   // lesson+key cache
   const getLK = async id => cache[id] || (cache[id] = { lesson: await S.loadLesson(id), key: await S.loadKey(id).catch(() => ({})) });
 
@@ -23,7 +42,7 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
     body.innerHTML = ''; const card = $('div', 'card'); body.appendChild(card);
     card.innerHTML = '<h2>学生提交 · Bài nộp</h2><p class="hint">布置过的作业,<b>全班每个学生一行</b>:还没交的显示「未提交」,交了就能点进去批改。<br><span class="vi">Mỗi học sinh một dòng: chưa nộp hiện “Chưa nộp”, đã nộp bấm vào để chấm.</span></p>';
     const ctl = $('div', 'row-ctl'); card.appendChild(ctl);
-    const sel = $('select'); sel.innerHTML = '<option value="">全部课 Tất cả</option>' + lessons.filter(l => l.open).map(l => `<option value="${l.id}">${lname(l)} ${l.title}</option>`).join('');
+    const sel = $('select'); sel.innerHTML = '<option value="">全部课 Tất cả</option>' + lessonOpts();
     const st = $('select'); st.innerHTML = '<option value="">全部状态</option><option value="none">未提交</option><option value="todo">待批改</option><option value="done">已批改</option>';
     const q = $('input'); q.type = 'text'; q.placeholder = '搜索姓名/邮箱';
     const cl = $('select'); cl.innerHTML = '<option value="">全部班级</option>';
@@ -36,10 +55,10 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
     const load = async () => {
       wrap.textContent = '加载中…';
       const [subs, students, asgs] = await Promise.all([S.listSubmissions(), S.listStudents().catch(() => []), S.listAssignments().catch(() => [])]);
-      rows = subs.slice();
+      rows = subs.filter(r => inLevel(r.lessonId));
       // every student of an assigned class gets a row for that lesson, even before handing in
       const seen = new Set(rows.map(r => r.lessonId + '|' + r.email));
-      asgs.forEach(a => students.filter(s => !a.cls || String(s.cls || '').toLowerCase() === String(a.cls).toLowerCase()).forEach(s => {
+      asgs.filter(a => inLevel(a.lessonId)).forEach(a => students.filter(s => !a.cls || String(s.cls || '').toLowerCase() === String(a.cls).toLowerCase()).forEach(s => {
         const k = a.lessonId + '|' + s.email; if (seen.has(k)) return; seen.add(k);
         rows.push({ _pending: true, lessonId: a.lessonId, lessonNo: (lessonMap[a.lessonId] || {}).no, email: s.email, name: s.name || s.email, cls: s.cls || '', asg: a.code, due: a.due });
       }));
@@ -108,26 +127,42 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
       HSKRender.renderLesson(left, lesson, {
         base: S.lessonUrl(lesson.id), answers: sub.answers || {}, mode: 'review', results: res.fields, key, showAnswers: true
       });
-      sum.innerHTML = `<h2 style="font-size:17px">分数 · Điểm</h2><div>自动分 <b>${res.auto}/${res.autoMax}</b> (${G.pct(res.auto, res.autoMax)}) · 手动分 <b>${res.manual}/${res.manualMax}</b>${res.pending ? ` <span class="badge wait" style="position:static">还有 ${res.pending} 题未批</span>` : ''}</div><div class="bigtotal">${res.total} <i>/ ${res.max}</i> <em>${G.pct(res.total, res.max)}</em></div>`;
+      sum.innerHTML = `<h2 style="font-size:17px">分数 · Điểm</h2><div>自动分 <b>${res.auto}/${res.autoMax}</b> (${G.pct(res.auto, res.autoMax)}) · 手动分 <b>${res.manual}/${res.manualMax}</b></div>${res.pending ? `<div style="margin-top:6px"><span class="badge wait" style="position:static;display:inline-block;white-space:normal">还有 ${res.pending} 题未批 · Còn ${res.pending} câu chưa chấm</span></div>` : ''}<div class="bigtotal">${res.total} <i>/ ${res.max}</i> <em>${G.pct(res.total, res.max)}</em></div>`;
       return res;
     };
 
     // per-field panel: show every manual field + wrong auto fields (+ all fields via toggle)
-    let showAll = false;
+    // list in the order the questions appear on the worksheet (page, then top-to-bottom, left-to-right)
+    const pos = f => { const r = f.type === 'choice' && f.options && f.options[0] ? f.options[0].rect : f.rect; return [f.page, Math.round(r[1] * 60), r[0]]; };
+    const ordered = lesson.fields.filter(f => f.points > 0).sort((a, b) => { const p = pos(a), q = pos(b); return p[0] - q[0] || p[1] - q[1] || p[2] - q[2]; });
+    let mode = 'todo';        // all = every question · todo = wrong + still to grade · wait = only the ones still to grade
     const panel = () => {
       list.innerHTML = '';
       const res = G.gradeAll(lesson, { ...sub, manual }, key);
-      const tg = $('label', null, `<input type="checkbox" ${showAll ? 'checked' : ''}> 显示所有题目`); tg.style.cssText = 'font-size:13px;display:block;margin:8px 0';
-      tg.querySelector('input').onchange = e => { showAll = e.target.checked; panel(); }; list.appendChild(tg);
-      lesson.fields.filter(f => f.points > 0).forEach(f => {
+      const bar = $('div', 'fltbar');
+      [['wait', '只看未批 · Chưa chấm'], ['todo', '错题+未批 · Sai & chưa chấm'], ['all', '全部 · Tất cả']].forEach(([m, t]) => {
+        const b = $('button', mode === m ? 'on' : '', t); b.type = 'button'; b.onclick = () => { mode = m; panel(); }; bar.appendChild(b);
+      });
+      list.appendChild(bar);
+      let shown = 0;
+      ordered.forEach(f => {
         const r = res.fields[f.id], v = (sub.answers || {})[f.id];
-        const needs = !r.auto || !r.correct;
-        if (!showAll && !needs) return;
+        const pending = !r.auto && !r.graded;
+        if (mode === 'wait' && !pending) return;
+        if (mode === 'todo' && r.auto && r.correct) return;
+        shown++;
         const g = $('div', 'gi ' + (r.auto ? (r.correct ? 'ok' : 'bad') : (r.graded ? 'ok' : 'wait')));
-        let ans = v == null ? '<i>(空)</i>' : (typeof v === 'object' && v.img ? '<img class="draw" src="' + v.img + '">' : esc(v));
+        g.title = '点击跳到作业页上的这一题 · Bấm để nhảy tới câu này';
+        g.onclick = e => {
+          if (e.target.closest('input,textarea,audio,iframe,a,button')) return;
+          const t = left.querySelector('[data-fid="' + f.id + '"]'); if (!t) return;
+          list.querySelectorAll('.gi.cur').forEach(x => x.classList.remove('cur')); g.classList.add('cur');
+          window.scrollTo({ top: Math.max(0, window.scrollY + t.getBoundingClientRect().top - window.innerHeight / 2), behavior: 'smooth' }); t.classList.remove('flash'); void t.offsetWidth; t.classList.add('flash');
+        };
+        let ans = v == null ? '<i>(空)</i>' : (typeof v === 'object' && v.rec ? recPlayer(v.rec) : typeof v === 'object' && v.img ? '<img class="draw" src="' + v.img + '">' : esc(v));
         const strokes = (sub.answers || {})[f.id + '~s'];
         g.innerHTML = `<div class="h"><span>${esc(f.id.toUpperCase())} <span class="vi">第${f.page}页</span></span><span><input type="number" min="0" max="${f.points}" step="0.5" value="${r.graded || r.overridden ? r.points : ''}" placeholder="–"> / ${f.points}</span></div>
-          <div class="stu">${ans}${strokes ? ` <span class="vi">笔顺${strokes.done ? '✓' : '✗'}${strokes.mistakes ? ' 错' + strokes.mistakes : ''}</span>` : ''}</div>` +
+          <div class="stu${f.pinyin ? ' pyn' : ''}">${ans}${strokes ? ` <span class="vi">笔顺${strokes.done ? '✓' : '✗'}${strokes.mistakes ? ' 错' + strokes.mistakes : ''}</span>` : ''}</div>` +
           (r.auto ? `<div class="vi">正确答案:${esc([].concat(key[f.id]).join(' / '))}</div>` : '') +
           `<textarea placeholder="评语 Nhận xét (可选)">${esc(comments[f.id] || '')}</textarea>`;
         const num = g.querySelector('input'), ta = g.querySelector('textarea');
@@ -135,6 +170,7 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
         ta.oninput = () => { comments[f.id] = ta.value; };
         list.appendChild(g);
       });
+      if (!shown) list.appendChild($('p', 'hint', mode === 'wait' ? '✅ 没有待批改的题了 · Không còn câu nào chờ chấm' : '这里没有题目 · Không có câu nào'));
     };
 
     draw(); panel();
@@ -150,7 +186,7 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
       const res = G.gradeAll(lesson, { ...sub, manual: sub.manual || manual }, key);
       const cm = Object.entries(sub.comments || {}).filter(([, v]) => v).map(([k, v]) => ({ label: G.label(k), text: v }));
       return HSKMailCard.build({
-        level: lesson.level || 'HSK3', lessonName: lname(lesson), title: lesson.title, titleVi: lesson.titleVi, student: sub.name,
+        level: lesson.course || 'HSK3', lessonName: lshort(lesson), title: lesson.title, titleVi: lesson.titleVi, student: sub.name,
         final: sub.finalScore, finalMax: sub.finalMax, auto: res.auto, autoMax: res.autoMax, manual: res.manual, manualMax: res.manualMax,
         comment: sub.comment, comments: cm, link: new URL(sub.asg ? 'lesson.html?a=' + sub.asg : 'index.html', location.href).href,
         contact: `Messenger ${HSK_CONFIG.contact.messenger} · Zalo ${HSK_CONFIG.contact.zalo} · ${HSK_CONFIG.contact.email}`,
@@ -197,7 +233,7 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
     const students = await S.listStudents().catch(() => []);
     const classes = classesOf(students);
     const form = $('div', 'row-ctl'); form.style.marginTop = '12px'; card.appendChild(form);
-    const ls = $('select'); ls.innerHTML = lessons.filter(l => l.open).map(l => `<option value="${l.id}">${lname(l)} ${esc(l.title)}</option>`).join('');
+    const ls = $('select'); ls.innerHTML = lessonOpts();
     const cs = $('select'); cs.innerHTML = '<option value="">全部班级 · tất cả lớp</option>' + classes.map(c => `<option>${esc(c)}</option>`).join('');
     const ci = $('input'); ci.type = 'text'; ci.placeholder = '或直接输入班级名'; ci.style.width = '140px';
     const due = $('input'); due.type = 'date'; due.title = '截止日期(可选)';
@@ -208,7 +244,7 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
     const code = () => Array.from(crypto.getRandomValues(new Uint8Array(6)), b => 'abcdefghjkmnpqrstuvwxyz23456789'[b % 31]).join('');
     const link = c => new URL('lesson.html?a=' + c, location.href).href;
     const draw = async () => {
-      const list = (await S.listAssignments()).sort((a, b) => (b.created || '').localeCompare(a.created || ''));
+      const list = (await S.listAssignments()).filter(a => inLevel(a.lessonId)).sort((a, b) => (b.created || '').localeCompare(a.created || ''));
       const subs = await S.listSubmissions().catch(() => []);
       if (!list.length) { wrap.innerHTML = '<p class="hint">还没有布置过作业。</p>'; return; }
       const t = $('table', 'tbl'); t.innerHTML = '<tr><th>课</th><th>班级</th><th>截止</th><th>进度(已交/全班)</th><th>状态</th><th>学生链接(贴到 Classroom)</th><th></th></tr>';
@@ -295,7 +331,7 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
     body.innerHTML = ''; const card = $('div', 'card'); body.appendChild(card);
     card.innerHTML = '<h2>题目编辑器 · Soạn đề</h2><p class="hint">在 PDF 页面图上框选答题位置、设置标准答案。选一课打开编辑器。</p>';
     const wrap = $('div'); wrap.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap;margin-top:8px'; card.appendChild(wrap);
-    lessons.filter(l => l.open).forEach(l => { const a = $('a', 'btn sm', `编辑 ${lname(l)}`); a.href = 'editor.html?l=' + l.id; wrap.appendChild(a); });
+    levelLessons().forEach(l => { const a = $('a', 'btn sm', `编辑 ${lname(l)}`); a.href = 'editor.html?l=' + l.id; wrap.appendChild(a); });
 
     // publish every lesson's answers in one go: pick all files of private/keys/ (L01.json … MOCK.json)
     const bulk = $('div', 'howto'); bulk.style.marginTop = '16px';

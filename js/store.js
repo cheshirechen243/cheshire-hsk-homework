@@ -170,5 +170,20 @@
     return 'gmail';
   }
 
-  window.HSKStore = Object.assign(C.firebase ? fb : demo, { notify, isTeacherEmail, canAutoMail: !!C.mailEndpoint });
+  // Voice answers: the Apps Script saves the file into the teacher's Google Drive (after checking the student's login) and returns its id.
+  async function uploadRecording(lessonId, fieldId, rec) {
+    if (!C.firebase) return { demo: true };                       // demo mode: the recording simply stays inside the submission
+    if (!C.mailEndpoint) throw new Error('录音上传服务还没配置(config.js 的 mailEndpoint,见 SETUP.md)。请联系老师。');
+    let idToken = ''; try { idToken = await firebase.auth().currentUser.getIdToken(); } catch (e) { }
+    const payload = JSON.stringify({ action: 'upload', idToken, lessonId, fieldId, mime: rec.mime, name: rec.name, data: String(rec.data).split(',')[1] || '' });
+    let res;
+    try { res = await fetch(C.mailEndpoint, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: payload }); }
+    catch (e) { throw new Error('连不上录音上传服务,请检查网络后重试。'); }
+    const txt = (await res.text()).trim();
+    if (txt.startsWith('ok:')) return { id: txt.slice(3) };
+    if (txt === 'forbidden') throw new Error('录音上传被拒绝(登录失效或不在学生名单里),请重新登录再提交。');
+    if (/<html|<!doctype/i.test(txt)) throw new Error('录音上传服务没有部署好,请联系老师。');
+    throw new Error(txt || '录音上传失败');
+  }
+  window.HSKStore = Object.assign(C.firebase ? fb : demo, { notify, uploadRecording, isTeacherEmail, canAutoMail: !!C.mailEndpoint });
 })();
