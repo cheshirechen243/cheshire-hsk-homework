@@ -192,5 +192,5 @@
     if (/<html|<!doctype/i.test(txt)) throw new Error('录音上传服务没有部署好,请联系老师。');
     throw new Error(txt || '录音上传失败');
   }
-  window.HSKStore = Object.assign(C.firebase ? fb : demo, { notify, uploadRecording, isTeacherEmail, canAutoMail: !!C.mailEndpoint });
+  window.HSKStore = Object.assign(C.firebase ? fb : demo, { loadLessonFile: id => j(SITE_ROOT + 'lessons/' + id + '/lesson.json'), notify, uploadRecording, isTeacherEmail, canAutoMail: !!C.mailEndpoint });
 })();

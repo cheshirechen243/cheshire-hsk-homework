@@ -352,7 +352,7 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
         const id = f.name.replace(/\.json$/i, '');
         try {
           st.textContent = `发布中 ${ok + fail.length + 1}/${files.length}: ${id} …`;
-          const key = JSON.parse(await f.text()); const lesson = await S.loadLesson(id);
+          const key = JSON.parse(await f.text()); const lesson = await S.loadLessonFile(id);      // the lesson.json on the site, not the older copy in Firestore
           await S.publishLesson(lesson, key); ok++;
         } catch (e) { fail.push(id + '(' + e.message + ')'); }
       }
