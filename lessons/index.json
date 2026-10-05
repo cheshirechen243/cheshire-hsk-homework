@@ -297,6 +297,151 @@
    "subtitle": "HSK Mock Test (Level 1)",
    "open": true,
    "label": "模拟测试"
+  },
+  {
+   "id": "H2-L01",
+   "course": "HSK2",
+   "no": 1,
+   "title": "她请我们吃了北京烤鸭",
+   "titleVi": "Cô ấy mời chúng tôi ăn vịt quay Bắc Kinh",
+   "subtitle": "She treated us to Peking Duck",
+   "open": true
+  },
+  {
+   "id": "H2-L02",
+   "course": "HSK2",
+   "no": 2,
+   "title": "还是打车去北大吧",
+   "titleVi": "Hay là đi taxi đến Đại học Bắc Kinh nhé",
+   "subtitle": "Let's take a taxi to Peking University instead",
+   "open": true
+  },
+  {
+   "id": "H2-L03",
+   "course": "HSK2",
+   "no": 3,
+   "title": "我想去西安旅游",
+   "titleVi": "Tôi muốn đi Tây An du lịch",
+   "subtitle": "I want to visit Xi'an",
+   "open": true
+  },
+  {
+   "id": "H2-L04",
+   "course": "HSK2",
+   "no": 4,
+   "title": "你穿红色的很好看",
+   "titleVi": "Bạn mặc màu đỏ rất đẹp",
+   "subtitle": "You look pretty good in red",
+   "open": true
+  },
+  {
+   "id": "H2-L05",
+   "course": "HSK2",
+   "no": 5,
+   "title": "第一次去中国朋友家",
+   "titleVi": "Lần đầu đến nhà bạn người Trung Quốc",
+   "subtitle": "Visiting a Chinese friend's home for the first time",
+   "open": true
+  },
+  {
+   "id": "H2-L06",
+   "course": "HSK2",
+   "no": 6,
+   "title": "小雪,生日快乐!",
+   "titleVi": "Tiểu Tuyết, chúc mừng sinh nhật!",
+   "subtitle": "Happy birthday, Xiaoxue!",
+   "open": true
+  },
+  {
+   "id": "H2-L07",
+   "course": "HSK2",
+   "no": 7,
+   "title": "他篮球打得很好",
+   "titleVi": "Anh ấy chơi bóng rổ rất giỏi",
+   "subtitle": "He plays basketball very well",
+   "open": true
+  },
+  {
+   "id": "H2-L08",
+   "course": "HSK2",
+   "no": 8,
+   "title": "虽然你忘了,但是我记得",
+   "titleVi": "Tuy bạn quên rồi, nhưng mình vẫn nhớ",
+   "subtitle": "Even though you forgot, I remembered",
+   "open": true
+  },
+  {
+   "id": "H2-L09",
+   "course": "HSK2",
+   "no": 9,
+   "title": "我去买杯奶茶",
+   "titleVi": "Tôi đi mua một ly trà sữa",
+   "subtitle": "I'm going to buy a cup of bubble tea",
+   "open": true
+  },
+  {
+   "id": "H2-L10",
+   "course": "HSK2",
+   "no": 10,
+   "title": "就要考试了",
+   "titleVi": "Sắp thi rồi",
+   "subtitle": "The exam is coming",
+   "open": true
+  },
+  {
+   "id": "H2-L11",
+   "course": "HSK2",
+   "no": 11,
+   "title": "我最喜欢吃中国菜",
+   "titleVi": "Tôi thích nhất ăn món Trung Quốc",
+   "subtitle": "I like Chinese food the most",
+   "open": true
+  },
+  {
+   "id": "H2-L12",
+   "course": "HSK2",
+   "no": 12,
+   "title": "这里比北京冷多了",
+   "titleVi": "Ở đây lạnh hơn Bắc Kinh nhiều",
+   "subtitle": "It's much colder here than in Beijing",
+   "open": true
+  },
+  {
+   "id": "H2-L13",
+   "course": "HSK2",
+   "no": 13,
+   "title": "我们爱上中文课",
+   "titleVi": "Chúng tôi yêu thích lớp tiếng Trung",
+   "subtitle": "We love attending Chinese class",
+   "open": true
+  },
+  {
+   "id": "H2-L14",
+   "course": "HSK2",
+   "no": 14,
+   "title": "一个人过年多没意思啊",
+   "titleVi": "Một mình đón Tết thật chán",
+   "subtitle": "It's boring to celebrate the Spring Festival alone",
+   "open": true
+  },
+  {
+   "id": "H2-L15",
+   "course": "HSK2",
+   "no": 15,
+   "title": "我想再去一次中国",
+   "titleVi": "Tôi muốn đi Trung Quốc thêm lần nữa",
+   "subtitle": "I want to go to China again",
+   "open": true
+  },
+  {
+   "id": "H2-MOCK",
+   "course": "HSK2",
+   "no": 16,
+   "title": "HSK(二级)模拟试卷",
+   "titleVi": "Đề thi thử HSK 2",
+   "subtitle": "HSK Mock Test (Level 2)",
+   "open": true,
+   "label": "模拟测试"
   }
  ]
 }
