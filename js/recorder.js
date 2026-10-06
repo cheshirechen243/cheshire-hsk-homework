@@ -3,7 +3,7 @@
 // worksheet and read the text aloud while recording. Returns a data-URL so the draft survives a reload and can be
 // uploaded when the student submits. The microphone needs https (or localhost).
 (function () {
-  const MAX_SEC = 180, MAX_BYTES = 8 * 1024 * 1024;
+  const MAX_SEC = 180, MAX_BYTES = 3 * 1024 * 1024;
   const $ = (t, c, h) => { const e = document.createElement(t); if (c) e.className = c; if (h != null) e.innerHTML = h; return e; };
   const fmt = s => Math.floor(s / 60) + ':' + String(Math.floor(s % 60)).padStart(2, '0');
   const pickMime = () => ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg;codecs=opus'].find(t => window.MediaRecorder && MediaRecorder.isTypeSupported(t)) || '';
@@ -44,7 +44,7 @@
       if (!navigator.mediaDevices || !window.MediaRecorder) { msg.innerHTML = '⚠️ 这个浏览器不能录音,请改用「上传文件」。 · Trình duyệt này không ghi âm được, hãy dùng “Tải file”.'; return; }
       try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
       catch (e) { msg.innerHTML = '⚠️ 没有麦克风权限。请在浏览器地址栏允许使用麦克风,或改用「上传文件」。 · Chưa được cấp quyền micro.'; return; }
-      chunks = []; const mime = pickMime(); rec = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 48000 } : undefined);
+      chunks = []; const mime = pickMime(); rec = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 32000 } : undefined);
       rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
       rec.onstop = async () => {
         clearInterval(timer); stopStream(); const dur = Math.round((Date.now() - t0) / 1000);
@@ -59,7 +59,7 @@
     rbtn.onclick = () => { if (rec && rec.state === 'recording') rec.stop(); else start(); };
     q('#rfile').onchange = async e => {
       const f = e.target.files[0]; if (!f) return;
-      if (f.size > MAX_BYTES) { msg.innerHTML = '⚠️ 文件超过 8MB · File quá 8MB'; return; }
+      if (f.size > MAX_BYTES) { msg.innerHTML = '⚠️ 文件超过 3MB,请直接在这里录音,或换短一点的文件 · File quá 3MB, hãy ghi âm trực tiếp'; return; }
       const data = await toDataURL(f); const a = new Audio(); a.src = data;
       const dur = await new Promise(res => { a.onloadedmetadata = () => res(isFinite(a.duration) ? Math.round(a.duration) : 0); a.onerror = () => res(0); setTimeout(() => res(0), 3000); });
       result = { data, mime: f.type || 'audio/mpeg', dur, name: f.name }; showPlayer();

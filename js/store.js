@@ -190,25 +190,38 @@
   // Voice answers: the Apps Script saves the file into the teacher's Google Drive (after checking the student's login) and returns its id.
   async function uploadRecording(lessonId, fieldId, rec, uid) {
     if (!C.firebase) return { demo: true };                       // demo mode: the recording simply stays inside the submission
-    if (!C.mailEndpoint) throw new Error('录音上传服务还没配置(config.js 的 mailEndpoint,见 SETUP.md)。请联系老师。');
-    let idToken = ''; try { idToken = await firebase.auth().currentUser.getIdToken(); } catch (e) { }
-    const payload = JSON.stringify({ action: 'upload', idToken, lessonId, fieldId, uid: uid || '', mime: rec.mime, name: rec.name, data: String(rec.data).split(',')[1] || '' });
-    let res; const ac = new AbortController(); const tm = setTimeout(() => ac.abort(), 120000);
-    try { res = await fetch(C.mailEndpoint, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: payload, signal: ac.signal }); }
-    catch (e) { throw new Error('连不上录音上传服务,请检查网络后重试。'); }
-    finally { clearTimeout(tm); }
-    const txt = (await res.text()).trim();
-    if (txt.startsWith('ok:')) return { id: txt.slice(3) };
-    if (/^forbidden/.test(txt)) throw new Error('录音上传被拒绝(登录失效或不在学生名单里),请重新登录再提交。\n原因 Lý do: ' + (txt.split(':')[1] || '(老版本的上传服务,请老师重新部署 Apps Script)'));
-    if (/<html|<!doctype/i.test(txt)) throw new Error('录音上传服务没有部署好,请联系老师。');
-    throw new Error('上传服务暂时没有正常回应(' + (txt.slice(0, 60) || '空') + ')');
+    await fb._load();
+    const u = firebase.auth().currentUser; if (!u) throw new Error('登录已失效,请重新登录 · Phiên đăng nhập hết hạn');
+    const email = u.email.toLowerCase(); const b64 = String(rec.data).split(',')[1] || '';
+    const SZ = 600000, n = Math.max(1, Math.ceil(b64.length / SZ)); const base = lessonId + '__' + email + '__' + fieldId + '__' + (uid || 'x');
+    for (let k = 0; k < n; k++) {                                  // every chunk is its own small document (Firestore limit ~1 MB per document); same id on a retry = overwritten, never duplicated
+      await fb.db.collection('recordings').doc(base + '__' + k).set({ lessonId, email, fieldId, uid: uid || 'x', k, n, mime: rec.mime || 'audio/webm', dur: rec.dur || 0, data: b64.slice(k * SZ, (k + 1) * SZ), at: now() });
+    }
+    await fb.db.collection('recmeta').doc(base).set({ lessonId, email, fieldId, uid: uid || 'x', n, size: b64.length, at: now() });
+    return { id: base, n };
   }
-  // teacher: the recordings a student has in Drive for one lesson -> [{name, id}]
+  // teacher: space used by recordings, and removing them (oldest graded ones first)
+  async function listRecMeta() { await fb._load(); const q = await fb.db.collection('recmeta').get(); return q.docs.map(d => ({ id: d.id, ...d.data() })); }
+  async function deleteRecording(m) {
+    await fb._load(); const col = fb.db.collection('recordings'); const b = fb.db.batch();
+    for (let k = 0; k < (m.n || 1); k++) b.delete(col.doc(m.id + '__' + k));
+    b.delete(fb.db.collection('recmeta').doc(m.id)); await b.commit();
+  }
+  // teacher: every recording a student has stored for one lesson -> [{uid, fieldId, mime, url}] (url = a playable blob)
   async function listRecordings(lessonId, email) {
-    if (!C.firebase || !C.mailEndpoint) return [];
-    let idToken = ''; try { idToken = await firebase.auth().currentUser.getIdToken(); } catch (e) { }
-    const res = await fetch(C.mailEndpoint, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'list', idToken, lessonId, email }) });
-    const txt = (await res.text()).trim(); if (!txt.startsWith('ok:')) throw new Error(txt.slice(0, 80)); return JSON.parse(txt.slice(3));
+    if (!C.firebase) return [];
+    await fb._load();
+    const q = await fb.db.collection('recordings').where('email', '==', email).where('lessonId', '==', lessonId).get();
+    const groups = {};
+    q.docs.forEach(d => { const x = d.data(); (groups[x.fieldId + '|' + x.uid] = groups[x.fieldId + '|' + x.uid] || []).push(x); });
+    const out = [];
+    Object.values(groups).forEach(parts => {
+      parts.sort((a, b) => a.k - b.k);
+      if (parts.length < parts[0].n) return;                       // not all chunks have arrived yet
+      const bin = parts.map(p => atob(p.data)).join(''); const bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      out.push({ uid: parts[0].uid, fieldId: parts[0].fieldId, mime: parts[0].mime, dur: parts[0].dur, url: URL.createObjectURL(new Blob([bytes], { type: parts[0].mime })) });
+    });
+    return out;
   }
   // recordings waiting to be uploaded survive a closed tab: kept in IndexedDB (localStorage is far too small for audio)
   const recQueue = (() => {
@@ -221,7 +234,7 @@
       all: async prefix => { try { const d = await open(); return await new Promise(res => { const out = []; const r = d.transaction('q').objectStore('q').openCursor(); r.onsuccess = () => { const c = r.result; if (c) { if (String(c.key).startsWith(prefix)) out.push({ key: c.key, ...c.value }); c.continue(); } else res(out); }; r.onerror = () => res([]); }); } catch (e) { return []; } },
     };
   })();
-  window.HSKStore = Object.assign(C.firebase ? fb : demo, { listRecordings, recQueue, loadLessonFile: async id => {      // the lesson.json file itself (fresh from the server), not the bundled data.js copy; data.js only as a fallback (file://)
+  window.HSKStore = Object.assign(C.firebase ? fb : demo, { listRecMeta, deleteRecording, listRecordings, recQueue, loadLessonFile: async id => {      // the lesson.json file itself (fresh from the server), not the bundled data.js copy; data.js only as a fallback (file://)
       try { const r = await fetch(SITE_ROOT + 'lessons/' + id + '/lesson.json?v=' + Date.now(), { cache: 'no-store' }); if (r.ok) return await r.json(); } catch (e) { }
       return j(SITE_ROOT + 'lessons/' + id + '/lesson.json');
     }, notify, uploadRecording, isTeacherEmail, canAutoMail: !!C.mailEndpoint });

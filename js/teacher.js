@@ -14,11 +14,12 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
   let curTab = 'subs', curLevel = '';
   const show = k => { curTab = k; [...tabs.children].forEach(b => b.classList.toggle('on', b.dataset.k === k)); lvBar.style.display = k === 'students' ? 'none' : ''; ({ subs: viewSubs, assign: viewAssign, students: viewStudents, edit: viewEdit })[k](); };
   // a student's voice answer: Drive preview player for uploaded files (the teacher owns them), <audio> for local demo data
-  const recPlayer = rc => {
+  const recPlayer = (rc, graded) => {
     const dur = rc.dur ? ` <span class="vi">${Math.floor(rc.dur / 60)}:${String(rc.dur % 60).padStart(2, '0')}</span>` : '';
     if (rc.id) return `🎤${dur}<br><iframe src="https://drive.google.com/file/d/${encodeURIComponent(rc.id)}/preview" style="width:100%;height:64px;border:2px solid var(--outline);border-radius:8px;background:#fff" allow="autoplay"></iframe><a href="https://drive.google.com/file/d/${encodeURIComponent(rc.id)}/view" target="_blank" rel="noopener" style="font-size:12px">在 Google Drive 打开 · Mở trong Drive</a>`;
+    if (rc.url) return `🎤${dur}<br><audio controls src="${rc.url}" style="width:100%"></audio>`;
     if (rc.data) return `🎤${dur}<br><audio controls src="${rc.data}" style="width:100%"></audio>`;
-    return rc.pending ? '<i>🎤 录音还没传到 Drive(学生可能还在上传,或离开了页面)· chưa có bản ghi</i>' : '<i>(录音丢失)</i>';
+    return rc.pending ? (graded ? '<i>🎤 录音已清理(空间不足时自动清理最早的已批改录音)· đã dọn bản ghi cũ</i>' : '<i>🎤 录音还没传上来(学生可能还在上传,或离开了页面)· chưa có bản ghi</i>') : '<i>(录音丢失)</i>';
   };  // lessons grouped by course (HSK1 / HSK3) for the drop-downs
   const levelLessons = () => lessons.filter(l => l.open && courseOf(l) === curLevel);
   const lessonOpts = () => levelLessons().map(l => `<option value="${l.id}">${lshort(l)} ${esc(l.title)}</option>`).join('');
@@ -92,6 +93,7 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
       wrap.innerHTML = ''; wrap.appendChild(t);
     };
     [sel, cl, st].forEach(x => x.onchange = draw); q.oninput = draw; rf.onclick = load;
+    toolsCard(body);
     csv.onclick = () => {
       const lines = [['姓名', '邮箱', '班级', '课', '提交时间', '自动分', '手动分', '总分', '满分', '百分比', '状态', '评语']];
       filtered().forEach(r => {
@@ -104,13 +106,87 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
     };
     load();
   }
+  // =====================================================  pack a student's / class's work into one .html file; recording space + clean-up
+  const MB = 1024 * 1024;
+  const limitMB = () => { try { return Math.max(100, Number(localStorage.getItem('hsk3.recLimitMB')) || 750); } catch (e) { return 750; } };
+  // remove the OLDEST graded recordings until the total is under `targetBytes`; never touches work that is not graded yet
+  async function cleanRecordings(targetBytes) {
+    const metas = await S.listRecMeta(); let total = metas.reduce((n, m) => n + (m.size || 0), 0);
+    if (total <= targetBytes) return { freed: 0, count: 0, total };
+    const subs = await S.listSubmissions(); const bySub = Object.fromEntries(subs.map(s => [s.lessonId + '__' + s.email, s]));
+    const eligible = metas.map(m => ({ m, s: bySub[m.lessonId + '__' + m.email] })).filter(x => x.s && x.s.graded)
+      .sort((a, b) => String(a.s.gradedAt || a.s.submittedAt || '').localeCompare(String(b.s.gradedAt || b.s.submittedAt || '')));
+    let freed = 0, count = 0;
+    for (const x of eligible) { if (total <= targetBytes) break; await S.deleteRecording(x.m); total -= x.m.size || 0; freed += x.m.size || 0; count++; }
+    return { freed, count, total };
+  }
+  async function autoClean() {
+    if (S.isDemo || !S.listRecMeta) return;
+    try {
+      const lim = limitMB() * MB; const metas = await S.listRecMeta(); const total = metas.reduce((n, m) => n + (m.size || 0), 0);
+      if (total > lim) { const r = await cleanRecordings(Math.floor(lim * 0.8)); if (r.count) toast(`录音空间快满了,已自动清理 ${r.count} 个最早的已批改录音(释放 ${(r.freed / MB).toFixed(0)} MB)`); }
+    } catch (e) { }
+  }
+  autoClean();
+
+  function toolsCard(parent) {
+    const card = $('div', 'card'); parent.appendChild(card);
+    card.innerHTML = '<h2>📦 打包作业 · Đóng gói bài làm</h2><p class="hint">把学生做过的作业(含批改、评语、录音)打包成<b>一个 html 文件</b>,双击就能离线打开,样子和成绩单邮件里点进去的详情一样。清理录音之前可以先打包留底。<br><span class="vi">Gói bài làm (kèm điểm, nhận xét, bản ghi âm) thành một file .html mở được ngoại tuyến.</span></p>';
+    const row = $('div', 'row-ctl'); card.appendChild(row);
+    const who = $('select'); who.innerHTML = '<option value="">选择学生或班级…</option>'; row.appendChild(who);
+    const all = $('label', null, '<input type="checkbox"> 包含所有等级'); const emb = $('label', null, '<input type="checkbox" checked> 嵌入页面图片(离线可看,文件较大)'); row.append(all, emb);
+    const go = $('button', 'btn', '生成并下载'); row.appendChild(go); const st = $('div', 'hint'); card.appendChild(st);
+    let students = [];
+    S.listStudents().then(list => {
+      students = list.slice().sort((a, b) => String(a.cls || '').localeCompare(String(b.cls || '')) || String(a.name).localeCompare(String(b.name)));
+      who.innerHTML = '<option value="">选择学生或班级…</option>' + classesOf(students).map(c => `<option value="c:${esc(c)}">👥 整班 · ${esc(c)}(一个文件)</option>`).join('') + students.map(s => `<option value="s:${esc(s.email)}">${esc(s.name || s.email)}${s.cls ? ' · ' + esc(s.cls) : ''}</option>`).join('');
+    }).catch(() => { });
+    go.onclick = async () => {
+      if (!who.value) { st.textContent = '请先选择学生或班级'; return; }
+      go.disabled = true;
+      try {
+        const [kind, val] = [who.value.slice(0, 1), who.value.slice(2)];
+        const chosen = kind === 'c' ? students.filter(s => (s.cls || '') === val) : students.filter(s => s.email === val);
+        const subs = await S.listSubmissions(); const includeAll = all.querySelector('input').checked;
+        const rows = chosen.map(s => ({ student: { name: s.name || s.email, email: s.email, cls: s.cls }, subs: subs.filter(x => x.email === s.email && (includeAll || inLevel(x.lessonId))) })).filter(r => r.subs.length);
+        if (!rows.length) { st.textContent = '这位(这个班)在当前等级下还没有提交的作业。'; go.disabled = false; return; }
+        const label = kind === 'c' ? val : rows[0].student.name;
+        const html = await HSKExport.build({ S, rows, getLK, lessonMap, embedImages: emb.querySelector('input').checked, title: `${label} · 作业 · Bài làm`, subtitle: `${label} · ${new Date().toLocaleDateString()}`, progress: t => { st.textContent = t; } });
+        const blob = new Blob([html], { type: 'text/html' }); const a = $('a'); a.href = URL.createObjectURL(blob); a.download = `沉鱼汉语-${label.replace(/[\\/:*?"<>|]/g, '_')}-${new Date().toISOString().slice(0, 10)}.html`; a.click();
+        st.textContent = `✅ 已生成(${(blob.size / MB).toFixed(1)} MB)· ${rows.length} 位学生 / ${rows.reduce((n, r) => n + r.subs.length, 0)} 份作业`;
+      } catch (e) { st.textContent = '打包失败:' + e.message; }
+      go.disabled = false;
+    };
+
+    if (S.isDemo || !S.listRecMeta) return;
+    const sp = $('div', 'howto'); sp.style.marginTop = '14px'; card.appendChild(sp);
+    sp.innerHTML = '<b>🧹 录音空间 · Dung lượng bản ghi</b><br>';
+    const info = $('div'); const ctl = $('div', 'row-ctl'); sp.append(info, ctl);
+    const lim = $('input'); lim.type = 'number'; lim.min = 100; lim.step = 50; lim.value = limitMB(); lim.style.width = '90px';
+    const clr = $('button', 'btn ghost sm', '立即清理最早的已批改录音'); const rf = $('button', 'btn ghost sm', '刷新');
+    ctl.append($('span', 'vi', '上限 MB:'), lim, rf, clr);
+    const note = $('div', 'hint', '超过上限时,每次打开老师页会自动清理最早的<b>已批改</b>录音(清到上限的 80%),没批改的不会动。数据库免费空间一共 1024 MB(还要留给作业记录)。');
+    sp.appendChild(note);
+    const refresh = async () => {
+      info.textContent = '统计中…';
+      try { const m = await S.listRecMeta(); const t = m.reduce((n, x) => n + (x.size || 0), 0); info.innerHTML = `已用 <b>${(t / MB).toFixed(1)} MB</b>(${m.length} 个录音)/ 上限 ${limitMB()} MB`; } catch (e) { info.textContent = '读取失败:' + e.message; }
+    };
+    lim.onchange = () => { try { localStorage.setItem('hsk3.recLimitMB', String(lim.value)); } catch (e) { } refresh(); };
+    rf.onclick = refresh;
+    clr.onclick = async () => {
+      if (!confirm('清理最早的已批改录音,清到上限的 80%。被清理的录音以后在批改页就听不到了(没有批改的作业不会动)。继续吗?')) return;
+      clr.disabled = true; try { const r = await cleanRecordings(Math.floor(limitMB() * MB * 0.8)); toast(r.count ? `已清理 ${r.count} 个录音,释放 ${(r.freed / MB).toFixed(0)} MB` : '没有需要清理的(还没超过上限的 80%)'); } catch (e) { toast('清理失败:' + e.message); } clr.disabled = false; refresh();
+    };
+    refresh();
+  }
+
   // =====================================================  grading view
   async function grade(sub) {
     body.innerHTML = '<div class="card">加载中…</div>';
     const { lesson, key } = await getLK(sub.lessonId);
     // recordings upload after the submission: look up the ones that have arrived in Drive (matched by their uid in the file name)
-    const waiting = Object.values(sub.answers || {}).filter(v => v && v.rec && v.rec.pending && !v.rec.id);
-    if (waiting.length && S.listRecordings) { try { const files = await S.listRecordings(sub.lessonId, sub.email); waiting.forEach(v => { const hit = files.find(f => v.rec.uid && f.name.indexOf('_' + v.rec.uid + '.') > 0); if (hit) v.rec.id = hit.id; }); } catch (e) { toast('读取 Drive 里的录音失败:' + e.message); } }
+    const waiting = Object.values(sub.answers || {}).filter(v => v && v.rec && v.rec.pending && !v.rec.id && !v.rec.url);
+    if (waiting.length && S.listRecordings) { try { const files = await S.listRecordings(sub.lessonId, sub.email); waiting.forEach(v => { const hit = files.find(f => v.rec.uid && f.uid === v.rec.uid); if (hit) { v.rec.url = hit.url; if (!v.rec.dur) v.rec.dur = hit.dur; } }); } catch (e) { toast('读取录音失败:' + e.message); } }
     const manual = { ...(sub.manual || {}) }, comments = { ...(sub.comments || {}) }; let overall = sub.comment || '';
     body.innerHTML = '';
     const head = $('div', 'card'); body.appendChild(head);
@@ -161,7 +237,7 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
           list.querySelectorAll('.gi.cur').forEach(x => x.classList.remove('cur')); g.classList.add('cur');
           window.scrollTo({ top: Math.max(0, window.scrollY + t.getBoundingClientRect().top - window.innerHeight / 2), behavior: 'smooth' }); t.classList.remove('flash'); void t.offsetWidth; t.classList.add('flash');
         };
-        let ans = v == null ? '<i>(空)</i>' : (typeof v === 'object' && v.rec ? recPlayer(v.rec) : typeof v === 'object' && v.img ? '<img class="draw" src="' + v.img + '">' : esc(v));
+        let ans = v == null ? '<i>(空)</i>' : (typeof v === 'object' && v.rec ? recPlayer(v.rec, sub.graded) : typeof v === 'object' && v.img ? '<img class="draw" src="' + v.img + '">' : esc(v));
         const strokes = (sub.answers || {})[f.id + '~s'];
         g.innerHTML = `<div class="h"><span>${esc(f.id.toUpperCase())} <span class="vi">第${f.page}页</span></span><span><input type="number" min="0" max="${f.points}" step="0.5" value="${r.graded || r.overridden ? r.points : ''}" placeholder="–"> / ${f.points}</span></div>
           <div class="stu${f.pinyin ? ' pyn' : ''}">${ans}${strokes ? ` <span class="vi">笔顺${strokes.done ? '✓' : '✗'}${strokes.mistakes ? ' 错' + strokes.mistakes : ''}</span>` : ''}</div>` +

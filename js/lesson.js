@@ -193,10 +193,14 @@ HSKShell.boot({ need: 'student', noBanner: true }, async (user, main) => {
   // ---------- recordings upload in the background (the Apps Script answers slowly or not at all now and then, so: retries; uploads are idempotent by uid)
   let upChip = null, upBusy = false;
   const sleep = ms => new Promise(r => setTimeout(r, ms));
+  let upPill = null;
   function chipSay(html, cls) {
     if (!upChip) { upChip = $('div', 'up-chip'); document.body.appendChild(upChip); }
     upChip.className = 'up-chip ' + (cls || ''); upChip.innerHTML = html;
     const n = document.getElementById('upnote'); if (n) n.innerHTML = html;
+    // the same status as a pill in the top bar, so it is still there after the result pop-up is closed
+    if (!upPill) { upPill = $('span', 'up-pill'); inn.insertBefore(upPill, out); }
+    upPill.className = 'up-pill ' + (cls || ''); upPill.innerHTML = (cls === 'ok' ? '✅ 录音已上传 · Đã tải bản ghi' : cls === 'bad' ? '⚠️ 录音没传上 · Chưa tải được' : '🎤 录音上传中… · Đang tải bản ghi');
   }
   async function uploadInBackground(items) {
     if (upBusy) return; upBusy = true;
@@ -209,11 +213,11 @@ HSKShell.boot({ need: 'student', noBanner: true }, async (user, main) => {
         let ok = false;
         for (let a = 0; a < 5 && !ok; a++) {
           try { const r = await S.uploadRecording(id, it.fid, it.rec, it.uid); ok = !!(r && (r.id || r.demo)); }
-          catch (e) { it.err = e.message; if (/被拒绝|拒绝/.test(e.message)) break; }
+          catch (e) { it.err = e.message; if (/拒绝|permission|insufficient|登录已失效/i.test(e.message)) break; }
           if (!ok) await sleep(2500 * (a + 1));
         }
         if (ok) { it.done = true; await S.recQueue.del(it.key); }
-        else if (/拒绝/.test(it.err || '')) break;
+        else if (/拒绝|permission|insufficient|登录已失效/i.test(it.err || '')) break;
       }
       if (items.every(x => x.done)) break;
     }
@@ -241,3 +245,4 @@ HSKShell.boot({ need: 'student', noBanner: true }, async (user, main) => {
     const close = () => ov.remove(); m.querySelector('.x').onclick = close; m.querySelector('.btn').onclick = close;
   }
 });
+
