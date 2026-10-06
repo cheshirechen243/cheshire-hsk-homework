@@ -18,7 +18,7 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
     const dur = rc.dur ? ` <span class="vi">${Math.floor(rc.dur / 60)}:${String(rc.dur % 60).padStart(2, '0')}</span>` : '';
     if (rc.id) return `🎤${dur}<br><iframe src="https://drive.google.com/file/d/${encodeURIComponent(rc.id)}/preview" style="width:100%;height:64px;border:2px solid var(--outline);border-radius:8px;background:#fff" allow="autoplay"></iframe><a href="https://drive.google.com/file/d/${encodeURIComponent(rc.id)}/view" target="_blank" rel="noopener" style="font-size:12px">在 Google Drive 打开 · Mở trong Drive</a>`;
     if (rc.data) return `🎤${dur}<br><audio controls src="${rc.data}" style="width:100%"></audio>`;
-    return '<i>(录音丢失)</i>';
+    return rc.pending ? '<i>🎤 录音还没传到 Drive(学生可能还在上传,或离开了页面)· chưa có bản ghi</i>' : '<i>(录音丢失)</i>';
   };  // lessons grouped by course (HSK1 / HSK3) for the drop-downs
   const levelLessons = () => lessons.filter(l => l.open && courseOf(l) === curLevel);
   const lessonOpts = () => levelLessons().map(l => `<option value="${l.id}">${lshort(l)} ${esc(l.title)}</option>`).join('');
@@ -108,6 +108,9 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
   async function grade(sub) {
     body.innerHTML = '<div class="card">加载中…</div>';
     const { lesson, key } = await getLK(sub.lessonId);
+    // recordings upload after the submission: look up the ones that have arrived in Drive (matched by their uid in the file name)
+    const waiting = Object.values(sub.answers || {}).filter(v => v && v.rec && v.rec.pending && !v.rec.id);
+    if (waiting.length && S.listRecordings) { try { const files = await S.listRecordings(sub.lessonId, sub.email); waiting.forEach(v => { const hit = files.find(f => v.rec.uid && f.name.indexOf('_' + v.rec.uid + '.') > 0); if (hit) v.rec.id = hit.id; }); } catch (e) { toast('读取 Drive 里的录音失败:' + e.message); } }
     const manual = { ...(sub.manual || {}) }, comments = { ...(sub.comments || {}) }; let overall = sub.comment || '';
     body.innerHTML = '';
     const head = $('div', 'card'); body.appendChild(head);

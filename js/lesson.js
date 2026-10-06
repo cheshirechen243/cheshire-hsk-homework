@@ -168,13 +168,14 @@ HSKShell.boot({ need: 'student', noBanner: true }, async (user, main) => {
       btn.disabled = true; btn.textContent = '提交中… Đang nộp…';
       try {
         const clean = {}; Object.entries(answers).forEach(([k, v]) => { if (v !== '' && v != null) clean[k] = v; });
-        // voice answers go to the teacher's Google Drive first; the submission only keeps their file ids
-        const recs = Object.entries(clean).filter(([, v]) => v && v.rec && v.rec.data);
-        for (let i = 0; i < recs.length; i++) {
-          btn.textContent = `上传录音 ${i + 1}/${recs.length}… · Đang tải bản ghi`;
-          const [fid, v] = recs[i]; const r = await S.uploadRecording(id, fid, v.rec);
-          if (r.id) clean[fid] = { rec: { id: r.id, mime: v.rec.mime, dur: v.rec.dur, name: v.rec.name } };
-        }
+        // voice answers: the submission is saved FIRST (marked pending); the recordings then upload to the teacher's Google Drive in the background
+        const queue = [];
+        if (!S.isDemo) Object.entries(clean).filter(([, v]) => v && v.rec && v.rec.data).forEach(([fid, v]) => {
+          const uid = Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-5);
+          queue.push({ key: 'rec:' + id + ':' + user.email + ':' + fid, fid, uid, rec: v.rec });
+          clean[fid] = { rec: { pending: true, uid, mime: v.rec.mime, dur: v.rec.dur, name: v.rec.name } };
+        });
+        for (const q of queue) await S.recQueue.put(q.key, { fid: q.fid, uid: q.uid, rec: q.rec });        // survives a closed tab
         btn.textContent = '提交中… Đang nộp…';
         sub = await S.submit({ lessonId: id, email: user.email, name: user.name, cls: user.cls || '', asg: asg ? asg.code : '', late: !!isLate, answers: clean, lessonNo: lesson.no });
         try { localStorage.removeItem(draftKey); } catch (e) { }
@@ -182,13 +183,50 @@ HSKShell.boot({ need: 'student', noBanner: true }, async (user, main) => {
         btn.remove(); Object.keys(answers).forEach(k => { if (!(k in clean)) delete answers[k]; });
         info.querySelector('.hint') && info.querySelector('.hint').remove();
         const res = drawResult(); summary(res); tipBtn.style.display = '';
-        if (res) showResult(res); else alert('已提交 Đã nộp');
+        if (res) showResult(res, queue.length); else alert('已提交 Đã nộp');
+        if (queue.length) uploadInBackground(queue);
         scroller.scrollTo({ top: 0, behavior: 'smooth' });
       } catch (e) { alert('提交失败,请重试 · Lỗi, thử lại: ' + e.message); btn.disabled = false; btn.textContent = '✔ 提交 · Nộp bài'; }
     });
   }
 
-  function showResult(res) {
+  // ---------- recordings upload in the background (the Apps Script answers slowly or not at all now and then, so: retries; uploads are idempotent by uid)
+  let upChip = null, upBusy = false;
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  function chipSay(html, cls) {
+    if (!upChip) { upChip = $('div', 'up-chip'); document.body.appendChild(upChip); }
+    upChip.className = 'up-chip ' + (cls || ''); upChip.innerHTML = html;
+    const n = document.getElementById('upnote'); if (n) n.innerHTML = html;
+  }
+  async function uploadInBackground(items) {
+    if (upBusy) return; upBusy = true;
+    window.onbeforeunload = () => '录音还在上传,现在离开会丢失 · Bản ghi đang tải lên, rời trang sẽ mất';
+    const total = items.length;
+    for (let round = 0; round < 3; round++) {
+      for (let i = 0; i < items.length; i++) {
+        const it = items[i]; if (it.done) continue;
+        chipSay(`🎤 录音上传中 ${items.filter(x => x.done).length + 1}/${total}… 请先不要关闭页面<br><span class="vi">Đang tải bản ghi lên… đừng đóng trang</span>`);
+        let ok = false;
+        for (let a = 0; a < 5 && !ok; a++) {
+          try { const r = await S.uploadRecording(id, it.fid, it.rec, it.uid); ok = !!(r && (r.id || r.demo)); }
+          catch (e) { it.err = e.message; if (/被拒绝|拒绝/.test(e.message)) break; }
+          if (!ok) await sleep(2500 * (a + 1));
+        }
+        if (ok) { it.done = true; await S.recQueue.del(it.key); }
+        else if (/拒绝/.test(it.err || '')) break;
+      }
+      if (items.every(x => x.done)) break;
+    }
+    window.onbeforeunload = null; upBusy = false;
+    const left = items.filter(x => !x.done);
+    if (!left.length) { chipSay('✅ 录音已全部上传 · Đã tải xong tất cả bản ghi', 'ok'); setTimeout(() => upChip && upChip.remove(), 7000); return; }
+    chipSay(`⚠️ 还有 ${left.length} 个录音没传上去:${esc((left[0].err || '').slice(0, 120))}<br><span class="vi">Còn ${left.length} bản ghi chưa tải lên.</span> <button class="btn sm" type="button">重试 · Thử lại</button>`, 'bad');
+    upChip.querySelector('button').onclick = () => uploadInBackground(items);
+  }
+  // recordings that were left over from an earlier visit (tab closed before they finished)
+  if (locked && !S.isDemo && S.recQueue) S.recQueue.all('rec:' + id + ':' + user.email + ':').then(list => { if (list.length) uploadInBackground(list); });
+
+  function showResult(res, nrec) {
     const ov = $('div', 'modal-ov'); const m = $('div', 'modal');
     m.innerHTML = `<div class="modal-h"><b>已提交 · Đã nộp bài 🎉</b><button class="x" type="button">✕</button></div>
       <div class="bigscore"><b>${res.auto}</b><span> / ${res.autoMax}</span><em>${G.pct(res.auto, res.autoMax)}</em></div>
@@ -196,6 +234,7 @@ HSKShell.boot({ need: 'student', noBanner: true }, async (user, main) => {
       <p style="text-align:center;margin:6px 0" class="hint">自动评分的题目得分<br><span class="vi">Điểm các câu chấm tự động</span></p>
       ${res.pending ? `<p style="text-align:center">还有 <b>${res.pending}</b> 题等老师批改<br><span class="vi">Còn ${res.pending} câu chờ cô chấm</span></p>` : ''}
       <p class="hint" style="text-align:center">页面上 ✅ = 对,❌ = 错,并显示正确答案。<br><span class="vi">✅ = đúng, ❌ = sai, có hiện đáp án đúng.</span></p>
+      ${nrec ? '<p class="hint" id="upnote" style="text-align:center">🎤 录音正在后台上传,请不要关闭页面<br><span class="vi">Bản ghi đang được tải lên, đừng đóng trang</span></p>' : ''}
       ${asg && asg.classroomUrl ? `<p class="hint" style="text-align:center">请回 Classroom 点「标记为完成」,老师才知道你已经做完。<br><span class="vi">Hãy quay lại Classroom bấm “Đánh dấu hoàn thành” để cô biết em đã làm xong.</span></p>` : ''}
       <div class="modal-f">${asg && asg.classroomUrl ? `<a class="btn ghost" href="${esc(asg.classroomUrl)}" target="_blank" rel="noopener">↩ 回到 Classroom · Về Classroom</a>` : ''}<button class="btn" type="button">查看答案 · Xem đáp án</button></div>`;
     ov.appendChild(m); document.body.appendChild(ov);

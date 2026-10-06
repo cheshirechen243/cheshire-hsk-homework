@@ -188,21 +188,40 @@
   }
 
   // Voice answers: the Apps Script saves the file into the teacher's Google Drive (after checking the student's login) and returns its id.
-  async function uploadRecording(lessonId, fieldId, rec) {
+  async function uploadRecording(lessonId, fieldId, rec, uid) {
     if (!C.firebase) return { demo: true };                       // demo mode: the recording simply stays inside the submission
     if (!C.mailEndpoint) throw new Error('录音上传服务还没配置(config.js 的 mailEndpoint,见 SETUP.md)。请联系老师。');
     let idToken = ''; try { idToken = await firebase.auth().currentUser.getIdToken(); } catch (e) { }
-    const payload = JSON.stringify({ action: 'upload', idToken, lessonId, fieldId, mime: rec.mime, name: rec.name, data: String(rec.data).split(',')[1] || '' });
-    let res;
-    try { res = await fetch(C.mailEndpoint, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: payload }); }
+    const payload = JSON.stringify({ action: 'upload', idToken, lessonId, fieldId, uid: uid || '', mime: rec.mime, name: rec.name, data: String(rec.data).split(',')[1] || '' });
+    let res; const ac = new AbortController(); const tm = setTimeout(() => ac.abort(), 120000);
+    try { res = await fetch(C.mailEndpoint, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: payload, signal: ac.signal }); }
     catch (e) { throw new Error('连不上录音上传服务,请检查网络后重试。'); }
+    finally { clearTimeout(tm); }
     const txt = (await res.text()).trim();
     if (txt.startsWith('ok:')) return { id: txt.slice(3) };
     if (/^forbidden/.test(txt)) throw new Error('录音上传被拒绝(登录失效或不在学生名单里),请重新登录再提交。\n原因 Lý do: ' + (txt.split(':')[1] || '(老版本的上传服务,请老师重新部署 Apps Script)'));
     if (/<html|<!doctype/i.test(txt)) throw new Error('录音上传服务没有部署好,请联系老师。');
-    throw new Error(txt || '录音上传失败');
+    throw new Error('上传服务暂时没有正常回应(' + (txt.slice(0, 60) || '空') + ')');
   }
-  window.HSKStore = Object.assign(C.firebase ? fb : demo, { loadLessonFile: async id => {      // the lesson.json file itself (fresh from the server), not the bundled data.js copy; data.js only as a fallback (file://)
+  // teacher: the recordings a student has in Drive for one lesson -> [{name, id}]
+  async function listRecordings(lessonId, email) {
+    if (!C.firebase || !C.mailEndpoint) return [];
+    let idToken = ''; try { idToken = await firebase.auth().currentUser.getIdToken(); } catch (e) { }
+    const res = await fetch(C.mailEndpoint, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'list', idToken, lessonId, email }) });
+    const txt = (await res.text()).trim(); if (!txt.startsWith('ok:')) throw new Error(txt.slice(0, 80)); return JSON.parse(txt.slice(3));
+  }
+  // recordings waiting to be uploaded survive a closed tab: kept in IndexedDB (localStorage is far too small for audio)
+  const recQueue = (() => {
+    let db = null;
+    const open = () => new Promise((res, rej) => { if (db) return res(db); const r = indexedDB.open('hsk3rec', 1); r.onupgradeneeded = () => r.result.createObjectStore('q'); r.onsuccess = () => { db = r.result; res(db); }; r.onerror = () => rej(r.error); });
+    const write = async fn => { const d = await open(); return new Promise((res, rej) => { const t = d.transaction('q', 'readwrite'); fn(t.objectStore('q')); t.oncomplete = () => res(); t.onerror = () => rej(t.error); }); };
+    return {
+      put: (k, v) => write(s => s.put(v, k)).catch(() => { }),
+      del: k => write(s => s.delete(k)).catch(() => { }),
+      all: async prefix => { try { const d = await open(); return await new Promise(res => { const out = []; const r = d.transaction('q').objectStore('q').openCursor(); r.onsuccess = () => { const c = r.result; if (c) { if (String(c.key).startsWith(prefix)) out.push({ key: c.key, ...c.value }); c.continue(); } else res(out); }; r.onerror = () => res([]); }); } catch (e) { return []; } },
+    };
+  })();
+  window.HSKStore = Object.assign(C.firebase ? fb : demo, { listRecordings, recQueue, loadLessonFile: async id => {      // the lesson.json file itself (fresh from the server), not the bundled data.js copy; data.js only as a fallback (file://)
       try { const r = await fetch(SITE_ROOT + 'lessons/' + id + '/lesson.json?v=' + Date.now(), { cache: 'no-store' }); if (r.ok) return await r.json(); } catch (e) { }
       return j(SITE_ROOT + 'lessons/' + id + '/lesson.json');
     }, notify, uploadRecording, isTeacherEmail, canAutoMail: !!C.mailEndpoint });
