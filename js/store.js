@@ -160,6 +160,8 @@
       cur.docs.forEach(d => { if (!keep.has(d.id)) b.delete(d.ref); });
       list.forEach(s => b.set(this.db.collection('students').doc(s.email), { name: s.name || '', cls: s.cls || '' }));
       await b.commit();
+      // keep the Apps Script's own copy of the roster up to date (it recognises students from it when the Firestore check fails)
+      if (C.mailEndpoint) { try { let idToken = ''; try { idToken = await firebase.auth().currentUser.getIdToken(); } catch (e) { } fetch(C.mailEndpoint, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'roster', idToken, emails: list.map(s => s.email) }) }).catch(() => { }); } catch (e) { } }
     },
   };
 
@@ -174,7 +176,7 @@
       catch (e) { throw new Error('连不上发信脚本。最常见原因:Apps Script 部署时「谁可以访问」没有选「任何人」,或改过脚本后没有「新版本」重新部署。'); }
       const txt = (await res.text()).trim();
       if (txt === 'ok') return 'sent';
-      if (txt === 'forbidden') throw new Error('发信脚本拒绝了这次请求:要么脚本还是旧版本(请粘贴最新的 mail-appscript.gs 并「新版本」重新部署),要么现在登录的不是老师邮箱。');
+      if (/^forbidden/.test(txt)) throw new Error('发信脚本拒绝了这次请求(' + txt + '):要么脚本还是旧版本(请粘贴最新的 mail-appscript.gs 并「新版本」重新部署),要么现在登录的不是老师邮箱。');
       if (/<html|<!doctype/i.test(txt)) throw new Error('发信脚本返回了网页而不是结果:通常是部署权限不对(应选「任何人」),或脚本报错。');
       throw new Error(txt || '发信脚本没有返回结果');
     }
@@ -196,7 +198,7 @@
     catch (e) { throw new Error('连不上录音上传服务,请检查网络后重试。'); }
     const txt = (await res.text()).trim();
     if (txt.startsWith('ok:')) return { id: txt.slice(3) };
-    if (txt === 'forbidden') throw new Error('录音上传被拒绝(登录失效或不在学生名单里),请重新登录再提交。');
+    if (/^forbidden/.test(txt)) throw new Error('录音上传被拒绝(登录失效或不在学生名单里),请重新登录再提交。\n原因 Lý do: ' + (txt.split(':')[1] || '(老版本的上传服务,请老师重新部署 Apps Script)'));
     if (/<html|<!doctype/i.test(txt)) throw new Error('录音上传服务没有部署好,请联系老师。');
     throw new Error(txt || '录音上传失败');
   }
