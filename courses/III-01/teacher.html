@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>讲者视图</title>
+<style>
+  *{box-sizing:border-box;} html{font-size:16px;}
+  body{margin:0;background:#1a1b1e;color:#eee;font-family:'Microsoft YaHei','Quattrocento Sans',sans-serif;}
+  .tw{display:grid;grid-template-columns:24rem 1fr;gap:1rem;padding:1rem;height:100vh;}
+  .col{display:flex;flex-direction:column;gap:.8rem;min-height:0;}
+  .card{background:#26282d;border-radius:1rem;padding:1rem 1.2rem;}
+  h1{margin:0;font-size:1.5rem;color:#f0c98a;} h2{margin:0 0 .5rem;font-size:1.05rem;color:#9fb3a6;}
+  .big{font-size:2.4rem;font-weight:700;line-height:1.2;}
+  .row{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;}
+  button{border:0;border-radius:.7rem;background:#3b3f47;color:#fff;font-size:1rem;padding:.55rem 1rem;font-weight:700;cursor:pointer;} button:hover{background:#4a4f59;}
+  .notes{flex:1;overflow:auto;font-size:var(--nsz,1.5rem);line-height:1.6;white-space:pre-wrap;}
+  .timer{font:700 1.7rem Consolas,monospace;color:#7fd18b;} .st{color:#aab;font-size:.95rem;}
+  #tlist{display:flex;flex-direction:column;gap:2px;overflow:auto;} #tlist button{background:none;text-align:left;padding:.25rem .6rem;font-size:.95rem;font-weight:400;color:#bbb;} #tlist button.on{background:#7a3e22;color:#fff;}
+  #tlist .sec{color:#e8c07d;font-weight:700;margin:.5rem 0 .1rem;font-size:.95rem;}
+  @media (max-width:900px){.tw{grid-template-columns:1fr;height:auto}}
+</style>
+</head>
+<body>
+<div class="tw">
+  <div class="col">
+    <div class="card"><h1 id="ttl">讲者视图</h1><div class="st" id="tst">等待课件窗口……（请先在课件页面按 P 打开）</div></div>
+    <div class="card row"><button id="bprev">◀ 上一步</button><button id="bnext">下一步 ▶</button><span class="timer" id="timer">00:00</span><button id="treset">⟲</button></div>
+    <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden"><h2>目录（点击跳转）</h2><div id="tlist"></div></div>
+  </div>
+  <div class="col">
+    <div class="card"><div class="big" id="tbig">—</div><div class="st" id="tnext" style="margin-top:.4rem"></div></div>
+    <div class="card" style="flex:1;min-height:0;display:flex;flex-direction:column">
+      <div class="row" style="justify-content:space-between"><h2>讲者备注</h2><div class="row"><button id="fdn">A−</button><button id="fup">A+</button></div></div>
+      <div class="notes" id="tnotes"></div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var meta=null, cur=0, sz=1.5, t0=Date.now();
+  var $=function(s){return document.querySelector(s)};
+  var bc=null; try{ bc=new BroadcastChannel('cwp-'+(new URLSearchParams(location.search).get('k')||'')); }catch(e){}
+  function send(c,i){ var m={t:'cmd',c:c,i:i}; if(window.opener&&!window.opener.closed){ try{window.opener.postMessage(m,'*')}catch(e){} } }
+  function show(){
+    if(!meta) return; var s=meta.slides[cur]; if(!s) return;
+    $('#ttl').textContent=meta.title||'讲者视图';
+    $('#tbig').textContent=(s.section?s.section+' · ':'')+s.name;
+    $('#tst').textContent=(cur+1)+' / '+meta.slides.length;
+    var nx=meta.slides[cur+1]; $('#tnext').textContent=nx?'下一页：'+nx.name:'（最后一页）';
+    $('#tnotes').textContent=s.notes||'（这页没有备注）';
+    var l=$('#tlist'); if(!l.childElementCount){ var last=null; meta.slides.forEach(function(x,i){ if(x.section&&x.section!==last){ last=x.section; var d=document.createElement('div'); d.className='sec'; d.textContent=x.section; l.appendChild(d);} var b=document.createElement('button'); b.textContent=(i+1)+'. '+x.name; b.dataset.i=i; b.onclick=function(){send('goto',i)}; l.appendChild(b); }); }
+    Array.prototype.forEach.call(l.querySelectorAll('button'),function(b){ b.classList.toggle('on',+b.dataset.i===cur); });
+    var on=l.querySelector('button.on'); if(on) on.scrollIntoView({block:'nearest'});
+  }
+  function onMsg(m){ if(!m||!m.t) return; if(m.t==='meta'){ meta=m; $('#tlist').innerHTML=''; show(); } else if(m.t==='state'){ cur=m.i; show(); } }
+  addEventListener('message',function(e){onMsg(e.data)}); if(bc) bc.onmessage=function(e){onMsg(e.data)};
+  $('#bprev').onclick=function(){send('prev')}; $('#bnext').onclick=function(){send('next')};
+  $('#fup').onclick=function(){sz+=.15;$('#tnotes').style.setProperty('--nsz',sz+'rem')}; $('#fdn').onclick=function(){sz=Math.max(.9,sz-.15);$('#tnotes').style.setProperty('--nsz',sz+'rem')};
+  $('#treset').onclick=function(){t0=Date.now()};
+  setInterval(function(){var s=Math.floor((Date.now()-t0)/1000);$('#timer').textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')},500);
+  addEventListener('keydown',function(e){ if(['ArrowRight',' ','Enter','PageDown'].indexOf(e.key)>=0){e.preventDefault();send('next')} else if(['ArrowLeft','PageUp','Backspace'].indexOf(e.key)>=0){e.preventDefault();send('prev')} });
+  send('hello'); setTimeout(function(){send('hello')},700);
+})();
+</script>
+</body>
+</html>
