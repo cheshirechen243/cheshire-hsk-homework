@@ -8,11 +8,11 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
   main.appendChild(HSKShell.topline(user, extra));
 
   const tabs = $('div', 'tabs'); const body = $('div'); main.appendChild(tabs); main.appendChild(body);
-  const T = { subs: '作业批改', assign: '布置作业 / 班级链接', students: '学生名单', edit: '题目编辑器' };
+  const T = { subs: '作业批改', assign: '布置作业 / 班级链接', students: '学生名单', edit: '题目编辑器', live: '上课 Lớp học' };
   // one level (HSK1 / HSK3 ...) at a time: pick the level first, then everything below only shows that level
   const courseOf = l => (l && l.course) || 'HSK3';
   let curTab = 'subs', curLevel = '';
-  const show = k => { curTab = k; [...tabs.children].forEach(b => b.classList.toggle('on', b.dataset.k === k)); lvBar.style.display = k === 'students' ? 'none' : ''; ({ subs: viewSubs, assign: viewAssign, students: viewStudents, edit: viewEdit })[k](); };
+  const show = k => { curTab = k; [...tabs.children].forEach(b => b.classList.toggle('on', b.dataset.k === k)); lvBar.style.display = (k === 'students' || k === 'live') ? 'none' : ''; ({ subs: viewSubs, assign: viewAssign, students: viewStudents, edit: viewEdit, live: () => HSKLiveTeacher(body, { S, $, esc, toast, user }) })[k](); };
   // a student's voice answer: Drive preview player for uploaded files (the teacher owns them), <audio> for local demo data
   const recPlayer = (rc, graded) => {
     const dur = rc.dur ? ` <span class="vi">${Math.floor(rc.dur / 60)}:${String(rc.dur % 60).padStart(2, '0')}</span>` : '';
