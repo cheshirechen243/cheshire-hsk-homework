@@ -324,7 +324,7 @@
     function placeMark(el, who, below) {
         const zl = $('#zl'); if (!zl || !el) return;
         const zr = zl.getBoundingClientRect(), ratio = zr.width / W, r = el.getBoundingClientRect();
-        const m = h('div', { class: 'ordmark' + (below ? ' nxt' : '') }, h('img', { src: P.avatarUrl(who.av), alt: '' }), h('span', null, below ? '下一位 ' + who.name : who.name));
+        const m = h('div', { class: 'ordmark' + (below ? ' nxt' : '') }, h('img', { src: P.avatarUrl(who.av), alt: '' }), h('span', null, who.name));
         if (below) { m.style.left = Math.max(4, (r.left - zr.left) / ratio - 10) + 'px'; m.style.top = ((r.bottom - zr.top) / ratio + 2) + 'px'; }
         else { m.style.left = Math.max(4, (r.left - zr.left) / ratio - 96) + 'px'; m.style.top = ((r.top - zr.top) / ratio - 4) + 'px'; }
         zl.append(m);
@@ -342,16 +342,8 @@
             placeMark(el, { name: tn.name, av: tn.av });
         } else if (sl.type === 'flash') {
             const wrap = $('#view .fwrap'); const nx = o.list[o.nx];
-            if (wrap) { wrap.append(h('div', { class: 'ordtag' }, h('img', { src: P.avatarUrl(cu.av), alt: '' }), h('span', null, cu.name))); if (nx && nx !== cu) wrap.append(h('div', { class: 'ordtag side nxt' }, h('img', { src: P.avatarUrl(nx.av), alt: '' }), h('span', null, '下一位 ' + nx.name))); }
+            if (wrap) wrap.append(h('div', { class: 'ordtag row' }, h('div', null, h('img', { src: P.avatarUrl(cu.av), alt: '' }), h('span', null, cu.name)), nx && nx !== cu ? h('div', { class: 'nxt' }, h('img', { src: P.avatarUrl(nx.av), alt: '' }), h('span', null, nx.name)) : null));
         } else if ((sl.anim || []).some(a => a.para)) { const ep = exampleP(); placeMark(ep, cu); const nx = o.list[o.nx]; if (nx && nx !== cu) placeMark(ep, nx, true); }
-        // class-wide cloze pages: who has answered (teacher can click an avatar to show that student's answers to everybody)
-        const cl = STUDENT ? clView : P.cls;
-        if (cl && cl.slide === sl.id) Object.keys(cl.units || {}).forEach(uk => {
-            const [, oid, pi] = uk.split(':'); const p = $$('.o[data-id="' + oid + '"] .tx > p')[+pi]; if (!p) return;
-            const zl = $('#zl'), zr = zl.getBoundingClientRect(), ratio = zr.width / W, r = p.getBoundingClientRect();
-            const row = h('div', { class: 'clmark' }, cl.units[uk].map(x => h('img', { src: P.avatarUrl(x.av), title: x.name, class: cl.shown === x.e ? 'on' : '', onclick: PRES ? () => { shownEmail[sl.id] = cl.shown === x.e ? null : x.e; lastTurn = ''; updateTurn(); } : null })));
-            row.style.left = ((r.right - zr.left) / ratio + 6) + 'px'; row.style.top = ((r.top - zr.top) / ratio - 6) + 'px'; zl.append(row);
-        });
     }
     P.on('advance', () => {
         if (!PRES) return;
@@ -373,7 +365,7 @@
         if (!PRES) return;
         const sl = slides[P.S], us = unitsOfPage(); let tn = null, fl = null, cl = null;
         if (us.length) {
-            const mode = pageMode[sl.id] || (us[0].kind === 'c' ? 'order' : 'class');
+            const mode = pageMode[sl.id] || 'class';
             if (mode === 'order' && ord.list.length) {
                 const isDone = u => u.keys.some(k => respFor(sl.id, k).length);
                 if (turnPrev && turnPrev.slide === sl.id) { const pu = us.find(u => u.key === turnPrev.ukey); if (pu && isDone(pu)) { advanceOrd(true); turnPrev = null; } }
@@ -391,12 +383,6 @@
                         }, 2200);
                     }
                 } else turnPrev = null;
-            } else if (mode === 'class' && us[0].kind === 'c') {
-                turnPrev = null; const units = {};
-                us.forEach(u => { const ems = []; u.keys.forEach(k => respFor(sl.id, k).forEach(r => { if (!ems.includes(r.email)) ems.push(r.email); })); if (ems.length) units[u.key] = ems.map(e => ({ e, name: nameOf(e), av: avOf(e) })); });
-                const shown = shownEmail[sl.id] || null;
-                cl = { slide: sl.id, closed: !!closedPages[sl.id], shown, units };
-                if (shown) { fl = {}; us.forEach(u => u.keys.forEach(k => { const r = respFor(sl.id, k).find(x => x.email === shown); if (r) fl[k] = r.val; })); }
             } else turnPrev = null;
         } else turnPrev = null;
         const sig = JSON.stringify([tn, fl, cl]);
@@ -614,10 +600,9 @@
             const us = unitsOfPage(), pm = $('#pmode'); pm.innerHTML = '';
             $('#pmsec').style.display = us.length ? '' : 'none';
             if (us.length) {
-                const mode = pageMode[sl.id] || (us[0].kind === 'c' ? 'order' : 'class');
+                const mode = pageMode[sl.id] || 'class';
                 const opt = (v, t) => h('label', { class: 'pchk' }, h('input', { type: 'radio', name: 'pmode', checked: mode === v, onchange: () => { pageMode[sl.id] = v; lastTurn = ''; updateTurn(); renderSide(); } }), ' ' + t);
                 pm.append(opt('order', '按回答顺序：一人一题（像素形象出现在题前，轮到的同学才能答）'), opt('class', '全班一起答'));
-                if (mode === 'class' && us[0].kind === 'c') pm.append(h('div', { class: 'pob' }, h('button', { class: 'btn sm', onclick: () => { closedPages[sl.id] = !closedPages[sl.id]; lastTurn = ''; updateTurn(); renderSide(); } }, closedPages[sl.id] ? '重新开放作答' : '截止作答'), h('span', { class: 'hint' }, '学生答完，形象会出现在句子旁；点形象可把那位同学的答案显示给全班')));
             }
         }, 'mode');
         safe(() => {

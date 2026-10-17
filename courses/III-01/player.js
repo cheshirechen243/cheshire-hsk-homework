@@ -19,7 +19,8 @@
     const opener = (() => { try { if (window.opener && window.opener.CW_PROJECT) return window.opener; if (embed && window.parent !== window && window.parent.CW_PROJECT) return window.parent; return null; } catch (e) { return null; } })();
     const project = window.LESSON_PROJECT || (opener && opener.CW_PROJECT);
     if (!project) { document.body.innerHTML = '<p style="padding:2rem;font:16px sans-serif">没有找到课件数据。</p>'; return; }
-    const resolve = window.CW_RESOLVE || (opener && opener.CW_RESOLVE) || (s => s);
+    const BUILD = (project.meta && project.meta.build) || 0;
+    const resolve = window.CW_RESOLVE || (opener && opener.CW_RESOLVE) || (s => (BUILD && s && !/^(data:|https?:|blob:)/.test(s) ? s + '?v=' + BUILD : s));
     const KEY = 'cwp:' + (project.meta.title || 'x');
     const W = project.meta.W, H = project.meta.H;
     const APP_W = 1920, APP_H = 1080;
@@ -136,7 +137,7 @@
         const setMsg = t => { msg.innerHTML = t || ''; };
         const strokes = {};
         function load(i) {
-            idx = i; host.innerHTML = ''; outline = true; shown = true;
+            idx = i; host.innerHTML = ''; host.style.pointerEvents = ''; outline = true; shown = true;
             $$('button', tabs).forEach((b, k) => b.classList.toggle('on', k === i));
             setMsg('加载笔顺数据…');
             writer = HanziWriter.create(host, chars[i], {
@@ -151,9 +152,9 @@
         const demo = () => { emit('demo'); writer.cancelQuiz(); setMsg('观看笔顺…'); writer.animateCharacter({ onComplete: () => setMsg(hzInfoText(chars[idx]) || ('共 ' + total() + ' 画')) }); };
         const loop = () => { emit('loop'); writer.cancelQuiz(); setMsg('循环示范（点“重置”停止）'); writer.loopCharacterAnimation(); };
         const practice = () => {
-            emit('practice');
+            emit('practice'); host.style.pointerEvents = '';
             let miss = 0; setMsg('请按笔顺一笔一笔写（写错会有提示）');
-            writer.quiz({ onMistake: () => { miss++; setMsg('再试一次 · Thử lại（' + miss + '）'); }, onCorrectStroke: d => setMsg('✓ 第 ' + (d.strokeNum + 1) + ' 笔'), onComplete: d => { setMsg('🎉 完成！共错 ' + d.totalMistakes + ' 次'); if (idx + 1 < chars.length) setTimeout(() => { load(idx + 1); if (!remote) emit('load'); practice(); }, 900); if (STUDENT && !MIRROR && live.sendResp) live.sendResp(slides[S.i].id, 'w:' + chars[idx], d.totalMistakes, 'write'); } });
+            writer.quiz({ onMistake: () => { miss++; setMsg('再试一次 · Thử lại（' + miss + '）'); }, onCorrectStroke: d => setMsg('✓ 第 ' + (d.strokeNum + 1) + ' 笔'), onComplete: d => { host.style.pointerEvents = 'none'; try { host.dispatchEvent(new MouseEvent('mouseup', { bubbles: true })); host.dispatchEvent(new TouchEvent('touchend', { bubbles: true })); } catch (e) { /* ignore */ } setMsg('🎉 完成！共错 ' + d.totalMistakes + ' 次'); if (idx + 1 < chars.length) setTimeout(() => { load(idx + 1); if (!remote) emit('load'); practice(); }, 900); if (STUDENT && !MIRROR && live.sendResp) live.sendResp(slides[S.i].id, 'w:' + chars[idx], d.totalMistakes, 'write'); } });
         };
         const body = h('div', { class: 'stroke' }, chars.length > 1 ? tabs : null, host, msg,
             h('div', { class: 'sbtns' }, mk('▶ 示范', demo, 'primary'), mk('🔁 循环', loop), mk('✍ 我来写', practice),
@@ -600,6 +601,7 @@
             setTimeout(() => olds.forEach(o => o.remove()), 500);
         } else olds.forEach(o => o.remove());
         post();
+        preload(S.i, 4);
         CWP.emit('render');
     }
     function goTo(i, fromEnd) { if (i < 0 || i >= slides.length) return; const dir = i === S.i ? 0 : (i > S.i ? 1 : -1); S.i = i; render({ fromEnd, dir }); closeOutline(); }
@@ -696,6 +698,23 @@
     }
 
     // ------------------------------------------------------------ boot
+    // media is fetched ahead of time (this slide + the next few) and a failed picture is retried
+    const preloaded = new Set();
+    function preload(i0, n) {
+        for (let i = i0; i < Math.min(slides.length, i0 + n); i++) {
+            const s = slides[i]; const urls = [];
+            if (s.bg && s.bg.img) urls.push(s.bg.img);
+            const lay = CW.layoutOf(project, s); if (lay) { if (lay.bg && lay.bg.img) urls.push(lay.bg.img); CW.walkObjs(lay.objects || [], o => { if (o.kind === 'image') urls.push(o.src); }); }
+            CW.walkObjs(s.objects || [], o => { if (o.kind === 'image' && o.src) urls.push(o.src); if (o.fillImg && o.fillImg.src) urls.push(o.fillImg.src); });
+            if (s.dialog) { (s.dialog.lines || []).forEach(l => urls.push(l.avatar)); Object.values(project.speakers || {}).forEach(a => urls.push(a)); }
+            urls.filter(Boolean).forEach(u => { if (preloaded.has(u)) return; preloaded.add(u); const im = new Image(); im.src = resolve(u); });
+        }
+    }
+    document.addEventListener('error', e => {
+        const t = e.target; if (!t || t.tagName !== 'IMG') return;
+        const n = +t.dataset.retry || 0; if (n >= 3) return; t.dataset.retry = n + 1;
+        setTimeout(() => { const s = t.src.split('#')[0]; t.src = s + (s.indexOf('?') >= 0 ? '&' : '?') + 'r=' + Date.now(); }, 1200 * (n + 1));
+    }, true);
     function boot() {
         document.title = project.meta.title || '课件';
         document.body.innerHTML = `<div id="appbox"><div id="app">
@@ -751,6 +770,7 @@
         if (PRES) { document.body.classList.add('presenter', 'notop'); }
         render();
         liveInit();
+        preload(0, 4);
     }
     boot();
     Object.assign(CWP, { videoReset() { videoSync = null; }, project, slides, h, $, $$, esc, STUDENT, MIRROR, PRES, ROLE, LIVE, CODE, lc, avatarUrl, resolve, params, goTo, next, prev, post, fullState, slideLabel, applyScale, liveSend, store });

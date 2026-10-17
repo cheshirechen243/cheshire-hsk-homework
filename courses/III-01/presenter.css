@@ -71,3 +71,5 @@ body.editing .o-box > .tx{outline:2px dashed #BD582C;outline-offset:-2px;cursor:
 .ordmark.nxt{width:auto;text-align:left;display:flex;align-items:center;gap:6px;} .ordmark.nxt img{width:44px;height:44px;margin:0;animation:nxt 1s infinite;} .ordmark.nxt span{font-size:16px;}
 .ordtag.side{left:auto;right:6%;top:40%;transform:none;} .ordtag.nxt img{animation:nxt 1s infinite;}
 .clmark{position:absolute;z-index:9;display:flex;gap:2px;pointer-events:none;} .clmark img{width:46px;height:46px;object-fit:contain;border-radius:50%;} body.presenter .clmark img{pointer-events:auto;cursor:pointer;} .clmark img.on{background:#FFE9C7;box-shadow:0 0 0 3px #BD582C;}
+
+.ordtag.row{display:flex;gap:34px;align-items:flex-end;} .ordtag.row > div{text-align:center;} .ordtag.row .nxt img{animation:nxt 1s infinite;opacity:.9;}
