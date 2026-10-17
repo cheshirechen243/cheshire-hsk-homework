@@ -11,8 +11,15 @@ window.HSKLiveTeacher = async function (body, X) {
   const students = await S.listStudents().catch(() => []);
   const classes = [...new Set(students.map(s => (s.cls || '').trim()).filter(Boolean))].sort();
 
+  // level: HSK1 / HSK2 / HSK3 (一级 / 二级 / 三级)
+  const LV = [['HSK1', '一级'], ['HSK2', '二级'], ['HSK3', '三级']];
+  const lvOf = c => c.level || ({ I: 'HSK1', II: 'HSK2', III: 'HSK3' }[(/^([IV]+)-/.exec(c.id || '') || [])[1]] || 'HSK3');
+  let level = 'HSK3'; try { level = localStorage.getItem('hsk3.liveLevel') || 'HSK3'; } catch (e) { /* ignore */ }
+  const lvBar = $('div', 'lvbar', '<span>等级 · Cấp độ</span>'); card.appendChild(lvBar);
+  LV.forEach(([k, t]) => { const b = $('button', 'lvbtn' + (k === level ? ' on' : ''), t); b.type = 'button'; b.onclick = () => { level = k; try { localStorage.setItem('hsk3.liveLevel', k); } catch (e) { /* ignore */ } [...lvBar.querySelectorAll('.lvbtn')].forEach(x => x.classList.toggle('on', x === b)); fillCourses(); draw(); }; lvBar.appendChild(b); });
   const ctl = $('div', 'row-ctl'); card.appendChild(ctl);
-  const cs = $('select'); cs.innerHTML = courses.length ? courses.map((c, i) => `<option value="${i}">${esc(c.no ? c.no + '：' : '')}${esc(c.title)}</option>`).join('') : '<option value="">（还没有课件，请先从课件工坊“导出到作业网站”）</option>';
+  const cs = $('select');   const fillCourses = () => { const list = courses.map((c, i) => [c, i]).filter(([c]) => lvOf(c) === level); cs.innerHTML = list.length ? list.map(([c, i]) => `<option value="${i}">${esc(c.no ? c.no + '：' : '')}${esc(c.title)}</option>`).join('') : '<option value="">（这个等级还没有课件，请先从课件工坊发布）</option>'; };
+  fillCourses();
   const cl = $('select'); cl.innerHTML = classes.map(c => `<option>${esc(c)}</option>`).join('') || '<option value="">（学生名单里还没有班级）</option>';
   const mk = $('button', 'btn seal', '＋ 生成课堂'); mk.type = 'button';
   ctl.append(cs, cl, mk);
@@ -28,7 +35,7 @@ window.HSKLiveTeacher = async function (body, X) {
     const code = L.newCode();
     const av = L.assign(mem.map(s => s.email), cls);
     const roster = mem.map(s => ({ email: s.email, name: s.name || s.email.split('@')[0], av: av[s.email] }));
-    await db.collection('live').doc(code).set({ code, cls, courseId: c.id, coursePath: c.path || c.id, title: c.title, no: c.no || '', roster, open: true, started: false, state: { i: 0, st: null, ts: Date.now() }, createdAt: new Date().toISOString() });
+    await db.collection('live').doc(code).set({ code, level: lvOf(c), cls, courseId: c.id, coursePath: c.path || c.id, title: c.title, no: c.no || '', roster, open: true, started: false, state: { i: 0, st: null, ts: Date.now() }, createdAt: new Date().toISOString() });
     toast('课堂已生成：' + code);
     draw();
   };
@@ -36,9 +43,9 @@ window.HSKLiveTeacher = async function (body, X) {
   async function draw() {
     clear(); list.innerHTML = '加载中…';
     const q = await db.collection('live').where('open', '==', true).get();
-    const sessions = q.docs.map(d => d.data()).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+    const sessions = q.docs.map(d => d.data()).filter(x => (x.level || 'HSK3') === level).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
     list.innerHTML = '';
-    if (!sessions.length) { list.appendChild($('p', 'hint', '现在没有进行中的课堂。')); return; }
+    if (!sessions.length) { list.appendChild($('p', 'hint', '这个等级现在没有进行中的课堂。')); return; }
     sessions.forEach(se => list.appendChild(panel(se)));
   }
 

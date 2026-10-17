@@ -14,6 +14,31 @@ HSKShell.boot({ need: 'student' }, async (user, main) => {
     ${user.cls ? `<br><span class="vi">Lớp của em · 你的班级: <b>${user.cls}</b></span>` : ''}</div>`;
   main.appendChild(card);
 
+  // two sections: homework / live class
+  const tabs = $('div', 'tabs'); const hwBox = $('div'), liveBox = $('div');
+  const T2 = { hw: '📝 作业 Bài tập', live: '🎓 上课 Lớp học' };
+  let curTab = 'hw'; try { curTab = localStorage.getItem('hsk3.stab') === 'live' ? 'live' : 'hw'; } catch (e) { /* ignore */ }
+  const showTab = k => { curTab = k; try { localStorage.setItem('hsk3.stab', k); } catch (e) { /* ignore */ } [...tabs.children].forEach(b => b.classList.toggle('on', b.dataset.k === k)); hwBox.style.display = k === 'hw' ? '' : 'none'; liveBox.style.display = k === 'live' ? '' : 'none'; };
+  Object.entries(T2).forEach(([k, v]) => { const b = $('button', 'tab', v); b.dataset.k = k; b.onclick = () => showTab(k); tabs.appendChild(b); });
+  main.appendChild(tabs); main.appendChild(hwBox); main.appendChild(liveBox);
+  const liveCard = $('div', 'card');
+  liveCard.innerHTML = '<h2>上课 · Lớp học trực tuyến</h2><p class="hint">老师开课后，这里会出现你们班的课堂，点“进入”就能看课件；也可以输入老师给的课堂码。<br><span class="vi">Khi cô mở lớp, lớp của em sẽ hiện ở đây. Hoặc nhập mã lớp cô gửi.</span></p>';
+  const codeRow = $('div', 'row-ctl'); const codeIn = $('input'); codeIn.type = 'text'; codeIn.placeholder = '课堂码 Mã lớp（6 位）'; codeIn.maxLength = 6; codeIn.style.textTransform = 'uppercase';
+  const goBtn = $('button', 'btn seal', '进入 Vào lớp'); goBtn.onclick = () => { const c = codeIn.value.trim().toUpperCase(); if (c.length >= 4) location.href = 'live.html?c=' + encodeURIComponent(c); };
+  codeIn.onkeydown = e => { if (e.key === 'Enter') goBtn.click(); };
+  codeRow.append(codeIn, goBtn); liveCard.appendChild(codeRow);
+  const liveList = $('div'); liveCard.appendChild(liveList); liveBox.appendChild(liveCard);
+  (async () => {
+    liveList.innerHTML = '<p class="hint">正在查看你们班有没有课堂…</p>';
+    try {
+      if (S.isDemo || !window.HSKLive) throw new Error('demo');
+      const rows = (await HSKLive.listOpenForClass(user.cls || '')).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+      liveList.innerHTML = '';
+      if (!rows.length) { liveList.innerHTML = '<p class="hint">现在没有正在进行的课堂。<br><span class="vi">Hiện chưa có lớp nào đang mở.</span></p>'; return; }
+      rows.forEach(se => { const a = $('a', 'lcard'); a.href = 'live.html?c=' + se.code; a.innerHTML = '<div class="no">' + (se.no || '▶') + '</div><div class="t">' + se.title + '</div><div class="tv">' + (se.started ? '🔴 正在上课 Đang học' : '⏳ 等待老师开始 Chờ cô bắt đầu') + '</div>'; liveList.appendChild(a); });
+    } catch (e) { liveList.innerHTML = ''; }
+  })();
+
   const mine = await S.listMine(user.email).catch(() => []);
   const lessons = await S.listLessons().catch(() => []);
   const asgs = await S.listForClass(user.cls || '').catch(() => []);
@@ -61,7 +86,7 @@ HSKShell.boot({ need: 'student' }, async (user, main) => {
     lvBox.appendChild(bar);
   }
   hist.append(lvBox, histBody); drawHist();
-  main.appendChild(hist);
+  hwBox.appendChild(hist);
 
   // Teacher preview shortcut (never shown to students): one card, a level label + its lessons in course order, with a gap between levels
   if (user.role === 'teacher') {
@@ -70,6 +95,7 @@ HSKShell.boot({ need: 'student' }, async (user, main) => {
       const h = $('div', 'lvhead' + (k ? ' again' : ''), c); t.appendChild(h); const g = $('div', 'lessons'); t.appendChild(g);
       lessons.filter(l => l.open && (l.course || 'HSK3') === c).sort((a, b) => (a.label ? 999 : a.no) - (b.label ? 999 : b.no)).forEach(L => { const a = $('a', 'lcard'); a.href = 'lesson.html?l=' + L.id; a.innerHTML = `<div class="no">${L.label ? '★' : L.no}</div><div class="t">${L.title}</div><div class="tv">${L.titleVi || ''}</div>`; g.appendChild(a); });
     });
-    main.appendChild(t);
+    hwBox.appendChild(t);
   }
+  showTab(curTab);
 });

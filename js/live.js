@@ -17,5 +17,7 @@
   async function db() { if (S.isDemo) throw new Error('演示模式不支持上课,请连接 Firebase 后使用'); await S._load(); return S.db; }
   const ONLINE_MS = 45000;
   const online = m => !!m && !m.left && (Date.now() - (m.lastSeen || 0)) < ONLINE_MS;
-  window.HSKLive = { newCode, pix, assign, db, online, AVN, ONLINE_MS };
+  // sessions of my class that are open right now (students)
+  async function listOpenForClass(cls) { const d = await db(); const q = await d.collection('live').where('open', '==', true).where('cls', '==', cls).get(); return q.docs.map(x => x.data()); }
+  window.HSKLive = { listOpenForClass, newCode, pix, assign, db, online, AVN, ONLINE_MS };
 })();
