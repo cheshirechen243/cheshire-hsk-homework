@@ -305,7 +305,8 @@ body.rec-open .scroller { padding-bottom: 190px; }
 @keyframes fflash { 0%, 60% { box-shadow: 0 0 0 4px var(--blue-deep), 0 0 18px 6px rgba(80,160,255,.7); } 100% { box-shadow: none; } }
 @media (max-width: 640px) { .rd-ctl .btn { padding: 6px 10px; font-size: 12.5px; } body.rec-open .scroller { padding-bottom: 250px; } }
 /* level switcher (HSK1 / HSK3) on the teacher page and level sections on the student page */
-.lvbar { display: flex; align-items: center; gap: 8px; margin: 14px 0 0; font-weight: 800; position: relative; z-index: 1; }
+.lvbar { display: flex; align-items: center; gap: 8px; margin: 14px 0 22px; font-weight: 800; position: relative; z-index: 1; }
+.lvbar + .row-ctl { margin-top: 6px; row-gap: 14px; }
 .lvbtn { border: 3px solid var(--outline); background: #fff; border-radius: 10px; padding: 4px 18px; font: 800 15px var(--sans); cursor: pointer; box-shadow: 0 3px 0 var(--outline); color: var(--ink); }
 .lvbtn.on { background: var(--pink-deep); color: #fff; }
 .lvbtn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--outline); }
