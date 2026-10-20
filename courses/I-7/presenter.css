@@ -73,3 +73,11 @@ body.editing .o-box > .tx{outline:2px dashed #BD582C;outline-offset:-2px;cursor:
 .clmark{position:absolute;z-index:9;display:flex;gap:2px;pointer-events:none;} .clmark img{width:46px;height:46px;object-fit:contain;border-radius:50%;} body.presenter .clmark img{pointer-events:auto;cursor:pointer;} .clmark img.on{background:#FFE9C7;box-shadow:0 0 0 3px #BD582C;}
 
 .ordtag.row{display:flex;gap:34px;align-items:flex-end;} .ordtag.row > div{text-align:center;} .ordtag.row .nxt img{animation:nxt 1s infinite;opacity:.9;}
+
+/* 字源 cards in the notes of a vocabulary page */
+.zyc{display:flex;gap:14px;background:#fff;border:1px solid #efe6ee;border-radius:16px;padding:12px 16px;margin:8px 0;box-shadow:0 1px 3px rgba(120,70,110,.06);}
+.zych{flex:none;width:2.2em;font:700 38px/1.1 'KaiTi','Microsoft YaHei',sans-serif;color:#d79dd0;}
+.zycb{flex:1;font-size:14px;line-height:1.7;color:#4a4046;} .zycb b{color:#3b3238;}
+.zytag{display:inline-block;background:#f9e4f4;color:#c98cc2;font-weight:700;border-radius:999px;padding:1px 12px;margin-bottom:4px;}
+.zyp{font-size:16px;color:#3b3238;margin-bottom:2px;}
+.zyo{margin-top:8px;color:#4a4046;line-height:1.7;}

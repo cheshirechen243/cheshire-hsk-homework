@@ -322,6 +322,27 @@
             document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up); e.preventDefault();
         });
     }
+    // the notes of a vocabulary page: the 字源 blocks (type / parts / 本义 / 演变) as cards, anything else (the questions) as plain lines
+    function notesHtml(sl) {
+        const lines = String(sl.notes || '').split('\n').map(x => x.replace(/\s+$/, ''));
+        const TYPE = /^(象形|指事|会意|形声|转注|假借)(.*)$/;
+        const hanChars = Array.from(new Set(Array.from((sl.vocab && sl.vocab.han) || '').filter(c => /[\u3400-\u9fff]/.test(c))));
+        const cards = []; const rest = []; let k = 0, cardNo = 0;
+        while (k < lines.length) {
+            let ch = '', head = null;
+            if (/^[\u3400-\u9fff]$/.test(lines[k].trim()) && TYPE.test((lines[k + 1] || '').trim())) { ch = lines[k].trim(); k++; }
+            const m = TYPE.exec((lines[k] || '').trim());
+            if (!m) { rest.push(lines[k]); k++; continue; }
+            if (!ch) ch = hanChars[cardNo] || '';
+            const card = { ch, type: m[1], parts: m[2].trim(), ben: '', yan: '' }; k++;
+            while (k < lines.length && /^(本义|演变)[：:]/.test(lines[k].trim())) { const mm = /^(本义|演变)[：:]\s*(.*)$/.exec(lines[k].trim()); if (mm[1] === '本义') card.ben = mm[2]; else card.yan = mm[2]; k++; }
+            cards.push(card); cardNo++;
+        }
+        const html = cards.map(c => '<div class="zyc"><div class="zych">' + esc(c.ch) + '</div><div class="zycb"><span class="zytag">' + esc(c.type) + '</span>' +
+            (c.parts ? '<div class="zyp">' + esc(c.parts) + '</div>' : '') + (c.ben ? '<div><b>本义：</b>' + esc(c.ben) + '</div>' : '') + (c.yan ? '<div><b>演变：</b>' + esc(c.yan) + '</div>' : '') + '</div></div>').join('');
+        const other = rest.join('\n').trim();
+        return html + (other ? '<div class="zyo">' + esc(other).replace(/\n/g, '<br>') + '</div>' : '');
+    }
     function renderMe() {
         let me = $('#ordme'); const o = ordView;
         const mine = o && o.list && o.list[o.i] && o.list[o.i].e === myEmail() && STUDENT && !MIRROR && o.show !== false;
@@ -473,6 +494,16 @@
         });
     }
     function simRespondQuiz() {
+        if (simOn && /^html:quiz/.test((slides[P.S] || {}).tag || '')) {                 // the quiz page made by the assistant: the simulated students answer too
+            const sl0 = slides[P.S];
+            SIMS.forEach((s, k) => setTimeout(() => {
+                if (slides[P.S] !== sl0) return;
+                const info = P.htmlQuizInfo && P.htmlQuizInfo(); if (!info) return;
+                info.forEach((q, qi) => { const key = 'q:' + (qi + 1); if (simResp.some(r => r.email === s.email && r.slide === sl0.id && r.key === key)) return; simResp.push({ slide: sl0.id, key, val: String.fromCharCode(65 + Math.floor(Math.random() * Math.max(1, q.n))), email: s.email, name: s.name, ts: Date.now(), type: 'quiz' }); });
+                renderSide(); checkAuto();
+            }, 2500 + k * 1500));
+            return;
+        }
         if (!simOn || !P.cur || !P.cur.hasQuiz) return;
         const sl = slides[P.S], qs = qsOf(sl); if ((pageMode[sl.id] || 'class') === 'order') return;
         SIMS.forEach((s, k) => setTimeout(() => {
@@ -598,7 +629,7 @@
             $('#pstep').textContent = st && st.k != null && st.total ? '步骤 ' + st.k + ' / ' + st.total : (st && st.pos ? '闪卡 ' + st.pos + ' / ' + st.total : '');
             const nt = $('#pnotes');
             if (!nt.querySelector('textarea')) {
-                nt.innerHTML = esc(sl.notes || '（这一页没有备注，点这里可以写）').replace(/\n/g, '<br>');
+                nt.innerHTML = sl.notes ? notesHtml(sl) : esc('（这一页没有备注，点这里可以写）');
                 nt.onclick = () => {
                     if (nt.querySelector('textarea')) return;
                     const ta = h('textarea', { rows: 8, style: { width: '100%' } }); ta.value = sl.notes || ''; nt.innerHTML = ''; nt.append(ta); ta.focus();

@@ -227,7 +227,8 @@
     let S = { i: Math.min(+(params.get('s') || store.get('pos', 0)) || 0, slides.length - 1) };
     let cur = null;
 
-    function closePop() { $$('.czpop').forEach(p => p.remove()); }
+    let popOff = null;          // the click-away listener of the open pop-up: it must go when the pop-up closes, or it closes the NEXT pop-up at once (second blank could not be filled)
+    function closePop() { $$('.czpop').forEach(p => p.remove()); if (popOff) { popOff(); popOff = null; } }
 
     // ---- free slide
     function freeView(slide, opts) {
@@ -339,7 +340,7 @@
             pop.style.left = Math.max(8, Math.min(innerWidth - pw - 8, r.left + r.width / 2 - pw / 2)) + 'px';
             const below = r.bottom + 8 + pop.offsetHeight < innerHeight;
             pop.style.top = (below ? r.bottom + 8 : r.top - pop.offsetHeight - 8) + 'px';
-            setTimeout(() => document.addEventListener('click', closePop, { once: true }), 0);
+            setTimeout(() => { if (!pop.isConnected) return; document.addEventListener('click', closePop, { once: true }); popOff = () => document.removeEventListener('click', closePop); }, 0);
         }
         if (ROLE === 'teacher' && stage._scwin) { let st = 0; stage._scwin.addEventListener('scroll', () => { clearTimeout(st); st = setTimeout(post, 120); }); }
         return {
