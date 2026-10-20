@@ -45,9 +45,9 @@
     function seeded(seed) { let h = 2166136261 >>> 0; for (const c of String(seed)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; } return () => { h ^= h << 13; h >>>= 0; h ^= h >>> 17; h ^= h << 5; h >>>= 0; return h / 4294967296; }; }
     function barFrames(e, el) {
         const W = Math.max(1, el.offsetWidth || parseFloat(el.style.width) || (el.parentElement && el.parentElement.offsetWidth) || 600), H = Math.max(1, el.offsetHeight || parseFloat(el.style.height) || 60);
-        const N = Math.max(10, Math.min(36, Math.round(H / 7))), sh = H / N, rnd = seeded(e.id || e.obj || 'x');
+        const N = Math.max(12, Math.min(180, Math.round(H / 5))), sh = H / N, rnd = seeded(e.id || e.obj || 'x');
         const order = Array.from({ length: N }, (_, i) => i).sort(() => rnd() - .5);
-        const start = i => order[i] / N * 0.6, K = 30, out = [];
+        const start = i => order[i] / N * 0.7, K = 40, out = [];
         for (let k = 0; k <= K; k++) {
             const off = k / K; let d = '';
             for (let i = 0; i < N; i++) { const p = Math.max(0, Math.min(1, (off - start(i)) / 0.4)); d += 'M0 ' + (i * sh).toFixed(1) + 'h' + W + 'v' + (p * sh + (p >= 1 ? .6 : 0)).toFixed(1) + 'h-' + W + 'Z'; }
