@@ -418,7 +418,7 @@
             const want = vd.p ? vd.t + Math.max(0, Math.min(5, (Date.now() - vd.ts) / 1000)) * (vd.r || 1) : vd.t;
             if (Math.abs(v.currentTime - want) > 1.2) { try { v.currentTime = want; } catch (e) { /* ignore */ } }
             v.playbackRate = vd.r || 1;
-            if (vd.p && v.paused) v.play().catch(() => { });
+            if (vd.p && v.paused) v.play().catch(() => { v.muted = true; v.play().catch(() => { }); });
             else if (!vd.p && !v.paused) v.pause();
         };
         if (v.readyState < 1) { v.addEventListener('loadedmetadata', go, { once: true }); v.load(); } else go();
@@ -693,7 +693,32 @@
         openModal(h('div', { class: 'helpbox' }, h('h3', null, '操作说明'), h('table', null, rows.map(r => h('tr', null, h('td', null, r[0]), h('td', null, r[1]))))));
     }
 
-    const fullState = () => Object.assign({}, (cur && cur.state && cur.state()) || {}, { m: modalSync, au: audioSync, vd: videoSync, rvd: CWP.rvd, tn: CWP.turn || null, fl: CWP.fills || null, cl: CWP.cls || null });
+    // ---- the assistant's html pages (flash / dialogue / quiz) inside the slide: teacher's clicks, changes and pen strokes are replayed on the other screens
+    const HV = { id: '', ev: [] };
+    let pendingHv = null;
+    function htmlFrame() { return $('.o-html iframe', document); }
+    function applyHtml(hv) {
+        pendingHv = hv || pendingHv; hv = pendingHv; if (ROLE === 'teacher' || !hv || !slides[S.i] || hv.id !== slides[S.i].id) return;
+        const fr = htmlFrame(); if (!fr || !fr._ready) return;
+        const from = fr._applied || 0;
+        if (hv.ev.length < from) { fr._applied = 0; fr._ready = false; fr.srcdoc = fr.srcdoc; return; }          // the teacher restarted the page
+        const fresh = hv.ev.slice(from); if (fresh.length) fr.contentWindow.postMessage({ cwb: 1, k: 'apply', ev: fresh }, '*');
+        fr._applied = hv.ev.length;
+    }
+    window.addEventListener('message', e => {
+        const m = e.data; if (!m || !m.cwb) return;
+        const fr = $$('.o-html iframe', document).find(f => f.contentWindow === e.source); if (!fr) return;
+        if (m.k === 'ready') {
+            fr._ready = true; fr._applied = 0;
+            e.source.postMessage({ cwb: 1, k: 'role', role: MIRROR ? 'mirror' : STUDENT ? 'student' : ROLE === 'teacher' ? 'teacher' : 'view' }, '*');
+            if (ROLE === 'teacher') { HV.id = slides[S.i].id; HV.ev = []; post(); } else applyHtml();
+            return;
+        }
+        if (ROLE !== 'teacher') return;
+        if (m.k === 'ev' && HV.ev.length < 2500) { HV.ev.push(m.e); post(); }
+        else if (m.k === 'nav' && m.a === 'next') CWP.emit('advance');
+    });
+    const fullState = () => Object.assign({}, (cur && cur.state && cur.state()) || {}, { hv: HV.id ? { id: HV.id, ev: HV.ev } : null, m: modalSync, au: audioSync, vd: videoSync, rvd: CWP.rvd, tn: CWP.turn || null, fl: CWP.fills || null, cl: CWP.cls || null });
 
     // ------------------------------------------------------------ live class (课堂): teacher writes the state, students follow
     const live = { ref: null, timer: null, db: null, user: null, session: null, members: {}, resp: {}, sendResp: null };
@@ -706,7 +731,7 @@
     function liveApply(state) {
         if (!state || !STUDENT) return;
         if (state.i !== S.i) goTo(state.i);
-        setTimeout(() => { const st = state.st || {}; if (cur && cur.sync) cur.sync(st); applyModal(st.m); applyAudio(st.au); applyVideo(st.vd); CWP.emit('applied', st); }, 80);
+        setTimeout(() => { const st = state.st || {}; if (cur && cur.sync) cur.sync(st); applyModal(st.m); applyAudio(st.au); applyVideo(st.vd); applyHtml(st.hv); CWP.emit('applied', st); }, 80);
     }
     async function liveInit() {
         if (MIRROR && lc) { lc.onmessage = e => { const m = e.data || {}; if (m.t === 'state') liveApply(m.state); else CWP.emit('msg', m); }; try { lc.postMessage({ t: 'hello' }); } catch (e) { /* ignore */ } return; }
