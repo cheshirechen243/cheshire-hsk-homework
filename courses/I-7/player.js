@@ -694,10 +694,12 @@
     }
 
     // ---- the assistant's html pages (flash / dialogue / quiz) inside the slide: teacher's clicks, changes and pen strokes are replayed on the other screens
-    const HV = { id: '', ev: [] };
-    let pendingHv = null;
+    const HV = { id: '', ev: [] }, HQ = { id: '', data: null };
+    let pendingHv = null, pendingHq = null;
     function htmlFrame() { return $('.o-html iframe', document); }
-    function applyHtml(hv) {
+    function applyHtml(hv, hq) {
+        if (hq !== undefined) pendingHq = hq;
+        if (ROLE !== 'teacher' && pendingHq && slides[S.i] && pendingHq.id === slides[S.i].id) { const f2 = htmlFrame(); if (f2 && f2._ready && !f2._revealed) { f2._revealed = true; f2.contentWindow.postMessage({ cwb: 1, k: 'reveal', data: pendingHq.data }, '*'); } }
         pendingHv = hv || pendingHv; hv = pendingHv; if (ROLE === 'teacher' || !hv || !slides[S.i] || hv.id !== slides[S.i].id) return;
         const fr = htmlFrame(); if (!fr || !fr._ready) return;
         const from = fr._applied || 0;
@@ -711,14 +713,33 @@
         if (m.k === 'ready') {
             fr._ready = true; fr._applied = 0;
             e.source.postMessage({ cwb: 1, k: 'role', role: MIRROR ? 'mirror' : STUDENT ? 'student' : ROLE === 'teacher' ? 'teacher' : 'view' }, '*');
-            if (ROLE === 'teacher') { HV.id = slides[S.i].id; HV.ev = []; post(); } else applyHtml();
+            if (ROLE === 'teacher') { HV.id = slides[S.i].id; HV.ev = []; HQ.id = ''; HQ.data = null; post(); } else applyHtml();
+            CWP.emit('htmlready');
+            return;
+        }
+        if (m.k === 'quiz') { fr._quiz = m.qs; return; }
+        if (m.k === 'ans' && STUDENT && !MIRROR) {
+            const key = String(m.q + 1);
+            if (CWP.canAnswer && !CWP.canAnswer('q', key)) { e.source.postMessage({ cwb: 1, k: 'deny', q: m.q }, '*'); return; }
+            if (live.sendResp) live.sendResp(slides[S.i].id, 'q:' + key, String.fromCharCode(65 + m.o), 'quiz');
             return;
         }
         if (ROLE !== 'teacher') return;
+        if (m.k === 'rev') { CWP.htmlQuizReveal(); return; }
         if (m.k === 'ev' && HV.ev.length < 2500) { HV.ev.push(m.e); post(); }
         else if (m.k === 'nav' && m.a === 'next') CWP.emit('advance');
     });
-    const fullState = () => Object.assign({}, (cur && cur.state && cur.state()) || {}, { hv: HV.id ? { id: HV.id, ev: HV.ev } : null, m: modalSync, au: audioSync, vd: videoSync, rvd: CWP.rvd, tn: CWP.turn || null, fl: CWP.fills || null, cl: CWP.cls || null });
+    // teacher: show the quiz answers on every screen, with each student's avatar under the option they chose and the share of right answers
+    CWP.htmlQuizReveal = () => {
+        const fr = htmlFrame(); if (!fr || !fr._quiz || HQ.data) return;
+        const sl = slides[S.i]; HQ.id = sl.id;
+        HQ.data = CWP.htmlQuizData ? CWP.htmlQuizData(sl, fr._quiz) : {};
+        fr.contentWindow.postMessage({ cwb: 1, k: 'reveal', data: HQ.data }, '*'); post();
+    };
+    CWP.htmlQuizInfo = () => { const fr = htmlFrame(); return fr && fr._quiz ? fr._quiz : null; };
+    CWP.htmlQuizDone = () => !!HQ.data;
+    CWP.htmlSend = msg => { const fr = htmlFrame(); if (fr && fr._ready) fr.contentWindow.postMessage(Object.assign({ cwb: 1 }, msg), '*'); };
+    const fullState = () => Object.assign({}, (cur && cur.state && cur.state()) || {}, { hq: HQ.data ? { id: HQ.id, data: HQ.data } : null, hv: HV.id ? { id: HV.id, ev: HV.ev } : null, m: modalSync, au: audioSync, vd: videoSync, rvd: CWP.rvd, tn: CWP.turn || null, fl: CWP.fills || null, cl: CWP.cls || null });
 
     // ------------------------------------------------------------ live class (课堂): teacher writes the state, students follow
     const live = { ref: null, timer: null, db: null, user: null, session: null, members: {}, resp: {}, sendResp: null };
@@ -731,7 +752,7 @@
     function liveApply(state) {
         if (!state || !STUDENT) return;
         if (state.i !== S.i) goTo(state.i);
-        setTimeout(() => { const st = state.st || {}; if (cur && cur.sync) cur.sync(st); applyModal(st.m); applyAudio(st.au); applyVideo(st.vd); applyHtml(st.hv); CWP.emit('applied', st); }, 80);
+        setTimeout(() => { const st = state.st || {}; if (cur && cur.sync) cur.sync(st); applyModal(st.m); applyAudio(st.au); applyVideo(st.vd); applyHtml(st.hv, st.hq || null); CWP.emit('applied', st); }, 80);
     }
     async function liveInit() {
         if (MIRROR && lc) { lc.onmessage = e => { const m = e.data || {}; if (m.t === 'state') liveApply(m.state); else CWP.emit('msg', m); }; try { lc.postMessage({ t: 'hello' }); } catch (e) { /* ignore */ } return; }

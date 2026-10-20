@@ -234,6 +234,16 @@
     const respFor = (slide, key) => allResp().filter(r => r.slide === slide && r.key === key);
     const nameOf = email => { const r = rosterOf().find(x => x.email === email); return r ? r.name : email; };
     const qsOf = slide => { const out = {}; CW.walkObjs(slide.objects || [], o => { if (o.quiz && o.quiz.q) (out[o.quiz.q] = out[o.quiz.q] || []).push(o); }); return out; };
+    P.htmlQuizData = (slide, info) => {
+        const out = {};
+        (info || []).forEach((q, qi) => {
+            const key = String(qi + 1), right = q.ans >= 0 ? String.fromCharCode(65 + q.ans) : '';
+            const rows = respFor(slide.id, 'q:' + key), opts = {}; let ok = 0;
+            rows.forEach(r => { (opts[r.val] = opts[r.val] || []).push(P.avatarUrl(avOf(r.email))); if (r.val === right) ok++; });
+            out[key] = { opts, right, ok, n: rows.length };
+        });
+        return out;
+    };
     P.quizData = slide => {
         const out = {}, qs = qsOf(slide);
         Object.keys(qs).forEach(q => {
@@ -287,23 +297,25 @@
         const o = ordView; let tab = $('#ordtab'), panel = $('#ordpanel');
         if (!o || !o.list || !o.list.length || o.show === false) { if (tab) tab.remove(); if (panel) panel.remove(); renderMe(); return; }
         if (ordOpen === null) { try { ordOpen = localStorage.getItem('cw_ord_open') === '1'; } catch (e) { ordOpen = false; } }
-        const follow = STUDENT && o.open !== undefined;                       // students see what the teacher sees
-        const open = follow ? !!o.open : ordOpen;
-        const flip = v => { if (follow) return; ordOpen = v; try { localStorage.setItem('cw_ord_open', v ? '1' : '0'); } catch (e) { /* ignore */ } renderOrd(); if (PRES) publishOrd(); };
-        if (!tab) { tab = h('button', { id: 'ordtab', title: '回答顺序' }, '👥'); $('#app').append(tab); }
-        tab.onclick = () => flip(!ordOpen);
+        const follow = MIRROR && o.open !== undefined;                        // only the shared (Meet) window copies what the teacher does with it
+        const pinned = false;                                                  // real students keep their own window: they may hide or drag it; only the shared (Meet) window follows the teacher
+        const open = pinned ? true : follow ? !!o.open : ordOpen;
+        const flip = v => { if (follow || pinned) return; ordOpen = v; try { localStorage.setItem('cw_ord_open', v ? '1' : '0'); } catch (e) { /* ignore */ } renderOrd(); if (PRES) publishOrd(); };
+        if (pinned) { if (tab) tab.remove(); tab = null; }
+        else if (!tab) { tab = h('button', { id: 'ordtab', title: '回答顺序' }, '👥'); $('#app').append(tab); }
+        if (tab) tab.onclick = () => flip(!ordOpen);
         if (panel) panel.remove();
         renderMe();
         if (!open) return;
-        const pos = (follow && o.pos ? { x: o.pos.x, y: o.pos.y } : null) || (() => { try { return JSON.parse(localStorage.getItem('cw_ord_pos') || 'null'); } catch (e) { return null; } })() || { x: 1700, y: 160 };
+        const pos = pinned ? { x: 1700, y: 160 } : (follow && o.pos ? { x: o.pos.x, y: o.pos.y } : null) || (() => { try { return JSON.parse(localStorage.getItem('cw_ord_pos') || 'null'); } catch (e) { return null; } })() || { x: 1700, y: 160 };
         if (PRES) ordPos = { x: pos.x, y: pos.y };
         panel = h('div', { id: 'ordpanel', style: { left: pos.x + 'px', top: pos.y + 'px' } });
-        const head = h('div', { class: 'ohead' }, '回答顺序', h('button', { onclick: () => flip(false) }, '✕'));
+        const head = h('div', { class: 'ohead' }, '回答顺序', pinned ? null : h('button', { onclick: () => flip(false) }, '✕'));
         panel.append(head);
         o.list.forEach((x, k) => panel.append(h('div', { class: 'oi2' + (k === o.i ? ' cur' : '') + (k === o.nx ? ' nxt' : '') + (x.on ? '' : ' off') }, h('img', { src: P.avatarUrl(x.av), alt: '' }), h('span', null, x.name))));
         $('#app').append(panel);
         head.addEventListener('pointerdown', e => {
-            if (e.target.tagName === 'BUTTON' || follow) return;
+            if (e.target.tagName === 'BUTTON' || follow || pinned) return;
             const ar = $('#app').getBoundingClientRect(), sc = ar.width / W; const sx = e.clientX, sy = e.clientY, ox = pos.x, oy = pos.y;
             const mv = ev => { pos.x = Math.max(0, Math.min(W - 160, ox + (ev.clientX - sx) / sc)); pos.y = Math.max(0, Math.min(H - 200, oy + (ev.clientY - sy) / sc)); panel.style.left = pos.x + 'px'; panel.style.top = pos.y + 'px'; };
             const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); try { localStorage.setItem('cw_ord_pos', JSON.stringify(pos)); } catch (er) { /* ignore */ } if (PRES) { ordPos = { x: pos.x, y: pos.y }; publishOrd(); } };
@@ -332,7 +344,9 @@
         else { m.style.left = Math.max(4, (r.left - zr.left) / ratio - 96) + 'px'; m.style.top = ((r.top - zr.top) / ratio - 4) + 'px'; }
         zl.append(m);
     }
+    P.on('htmlready', () => renderMarks());
     function renderMarks() {
+        if (P.htmlSend && !/^html:s?flash/.test(((slides[P.S] || {}).tag) || '')) P.htmlSend({ k: 'ord', list: null });
         $$('.ordmark').forEach(e => e.remove()); $$('.ordtag').forEach(e => e.remove()); $$('.clmark').forEach(e => e.remove());
         const o = ordView || { list: [], i: 0 }; if (o.show === false) return;
         const cu = o.list[o.i];
@@ -343,8 +357,11 @@
             if (/^c:/.test(k0)) { const [, oid, idx] = k0.split(':'); const sp = $('.o[data-id="' + oid + '"] .cz[data-i="' + idx + '"]'); el = sp ? (sp.closest('p') || sp) : null; }
             else if (/^q:/.test(k0)) el = $('.qz[data-q="' + k0.slice(2) + '"]');
             placeMark(el, { name: tn.name, av: tn.av });
-        } else if (sl.type === 'flash' || /^html:s?flash/.test(sl.tag || '')) {
-            const wrap = sl.type === 'flash' ? $('#view .fwrap') : $('#zl'); const nx = o.list[o.nx];
+        } else if (/^html:s?flash/.test(sl.tag || '')) {
+            const nx = o.list[o.nx];
+            if (P.htmlSend) P.htmlSend({ k: 'ord', list: [{ name: cu.name, img: P.avatarUrl(cu.av) }], nx: nx && nx !== cu ? { name: nx.name, img: P.avatarUrl(nx.av) } : null });
+        } else if (sl.type === 'flash') {
+            const wrap = $('#view .fwrap'); const nx = o.list[o.nx];
             if (wrap) wrap.append(h('div', { class: 'ordtag row' }, h('div', null, h('img', { src: P.avatarUrl(cu.av), alt: '' }), h('span', null, cu.name)), nx && nx !== cu ? h('div', { class: 'nxt' }, h('img', { src: P.avatarUrl(nx.av), alt: '' }), h('span', null, nx.name)) : null));
         } else if (ROWMARK && (sl.anim || []).some(a => a.para)) { const ep = exampleP(); placeMark(ep, cu); const nx = o.list[o.nx]; if (nx && nx !== cu) placeMark(ep, nx, true); }   // level 3: a person on every example row
     }
@@ -435,6 +452,11 @@
     }
     let autoOn = true;
     function checkAuto() {
+        if (PRES && autoOn && /^html:quiz/.test((slides[P.S] || {}).tag || '') && P.htmlQuizInfo && P.htmlQuizInfo() && !P.htmlQuizDone()) {
+            const sl = slides[P.S], info = P.htmlQuizInfo(), on = onlineEmails();
+            if (info.length && on.length && on.every(em => info.every((q, qi) => respFor(sl.id, 'q:' + (qi + 1)).some(r => r.email === em)))) P.htmlQuizReveal();
+            return;
+        }
         if (!PRES || !autoOn || !P.cur || !P.cur.hasQuiz) return;
         const st = P.cur.state(); if (st && st.rv) return;
         const sl = slides[P.S]; if ((pageMode[sl.id] || 'class') === 'order') return;

@@ -36,3 +36,5 @@
 
 .qframe .qbadge{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:34px;line-height:1;} .qframe.ok,.qframe.bad{box-shadow:none;}
 .cw-scwin.snap{scroll-snap-type:y mandatory;} .cw-scwin .snapitem{scroll-snap-align:start;scroll-margin-top:6px;}
+
+.cloze .cz.ok,.cloze .cz.sel,.cloze .cz.bad{font-family:'KaiTi','STKaiti','楷体',serif !important;font-weight:400 !important;}
