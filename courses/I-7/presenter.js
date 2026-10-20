@@ -246,12 +246,12 @@
     };
 
     // ------------------------------------------------------------------ answer order (回答顺序): endless loop, not reset by changing page
-    let ord = { list: [], i: 0, on: true, made: false, used: false }; let ordOpen = null;
+    let ord = { list: [], i: 0, on: true, made: false, used: false }; let ordOpen = null, ordPos = null;
     const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
     function publishOrd() {
         const on = new Set(onlineEmails()); let nx = -1;
         for (let k = 1; k <= ord.list.length; k++) { const j = (ord.i + k) % ord.list.length; if (on.has(ord.list[j].e) && j !== ord.i) { nx = j; break; } }
-        sendUi({ ord: { list: ord.list.map(x => ({ e: x.e, name: x.name, av: x.av, on: on.has(x.e) })), i: ord.i, nx, show: ord.on } });
+        sendUi({ ord: { list: ord.list.map(x => ({ e: x.e, name: x.name, av: x.av, on: on.has(x.e) })), i: ord.i, nx, show: ord.on, pos: ordPos, open: !!ordOpen } });
     }
     function buildOrd(reshuffle) {
         const ro = rosterOf(), on = onlineEmails();
@@ -287,24 +287,26 @@
         const o = ordView; let tab = $('#ordtab'), panel = $('#ordpanel');
         if (!o || !o.list || !o.list.length || o.show === false) { if (tab) tab.remove(); if (panel) panel.remove(); renderMe(); return; }
         if (ordOpen === null) { try { ordOpen = localStorage.getItem('cw_ord_open') === '1'; } catch (e) { ordOpen = false; } }
-        const open = ordOpen;
-        const flip = v => { ordOpen = v; try { localStorage.setItem('cw_ord_open', v ? '1' : '0'); } catch (e) { /* ignore */ } renderOrd(); };
+        const follow = STUDENT && o.open !== undefined;                       // students see what the teacher sees
+        const open = follow ? !!o.open : ordOpen;
+        const flip = v => { if (follow) return; ordOpen = v; try { localStorage.setItem('cw_ord_open', v ? '1' : '0'); } catch (e) { /* ignore */ } renderOrd(); if (PRES) publishOrd(); };
         if (!tab) { tab = h('button', { id: 'ordtab', title: '回答顺序' }, '👥'); $('#app').append(tab); }
         tab.onclick = () => flip(!ordOpen);
         if (panel) panel.remove();
         renderMe();
         if (!open) return;
-        const pos = (() => { try { return JSON.parse(localStorage.getItem('cw_ord_pos') || 'null'); } catch (e) { return null; } })() || { x: 1700, y: 160 };
+        const pos = (follow && o.pos ? { x: o.pos.x, y: o.pos.y } : null) || (() => { try { return JSON.parse(localStorage.getItem('cw_ord_pos') || 'null'); } catch (e) { return null; } })() || { x: 1700, y: 160 };
+        if (PRES) ordPos = { x: pos.x, y: pos.y };
         panel = h('div', { id: 'ordpanel', style: { left: pos.x + 'px', top: pos.y + 'px' } });
         const head = h('div', { class: 'ohead' }, '回答顺序', h('button', { onclick: () => flip(false) }, '✕'));
         panel.append(head);
         o.list.forEach((x, k) => panel.append(h('div', { class: 'oi2' + (k === o.i ? ' cur' : '') + (k === o.nx ? ' nxt' : '') + (x.on ? '' : ' off') }, h('img', { src: P.avatarUrl(x.av), alt: '' }), h('span', null, x.name))));
         $('#app').append(panel);
         head.addEventListener('pointerdown', e => {
-            if (e.target.tagName === 'BUTTON') return;
+            if (e.target.tagName === 'BUTTON' || follow) return;
             const ar = $('#app').getBoundingClientRect(), sc = ar.width / W; const sx = e.clientX, sy = e.clientY, ox = pos.x, oy = pos.y;
             const mv = ev => { pos.x = Math.max(0, Math.min(W - 160, ox + (ev.clientX - sx) / sc)); pos.y = Math.max(0, Math.min(H - 200, oy + (ev.clientY - sy) / sc)); panel.style.left = pos.x + 'px'; panel.style.top = pos.y + 'px'; };
-            const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); try { localStorage.setItem('cw_ord_pos', JSON.stringify(pos)); } catch (er) { /* ignore */ } };
+            const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); try { localStorage.setItem('cw_ord_pos', JSON.stringify(pos)); } catch (er) { /* ignore */ } if (PRES) { ordPos = { x: pos.x, y: pos.y }; publishOrd(); } };
             document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up); e.preventDefault();
         });
     }
@@ -343,12 +345,12 @@
         } else if (sl.type === 'flash') {
             const wrap = $('#view .fwrap'); const nx = o.list[o.nx];
             if (wrap) wrap.append(h('div', { class: 'ordtag row' }, h('div', null, h('img', { src: P.avatarUrl(cu.av), alt: '' }), h('span', null, cu.name)), nx && nx !== cu ? h('div', { class: 'nxt' }, h('img', { src: P.avatarUrl(nx.av), alt: '' }), h('span', null, nx.name)) : null));
-        } else if ((sl.anim || []).some(a => a.para)) { const ep = exampleP(); placeMark(ep, cu); const nx = o.list[o.nx]; if (nx && nx !== cu) placeMark(ep, nx, true); }
+        }
     }
     P.on('advance', () => {
         if (!PRES) return;
         const sl = slides[P.S], tag = sl.tag || '';
-        if (sl.type === 'flash' || (/vocab|grammar/.test(tag) && (sl.anim || []).some(a => a.para))) { if (ord.used) advanceOrd(false); ord.used = true; }
+        if (sl.type === 'flash') { if (ord.used) advanceOrd(false); ord.used = true; }          // only flash cards change the person by themselves
         renderMarks();
     });
 
@@ -645,7 +647,7 @@
         if (PRES) {
             buildPresenter(); bindEditing();
             P.on('render', () => {
-                safe(() => { const sl = slides[P.S], st = P.cur && P.cur.state ? P.cur.state() : null; if (sl.type === 'flash' || ((/vocab|grammar/.test(sl.tag || '')) && st && st.k >= 1 && (sl.anim || []).some(a => a.para))) { if (ord.used) advanceOrd(false); ord.used = true; } }, 'rot');
+                safe(() => { const sl = slides[P.S], st = P.cur && P.cur.state ? P.cur.state() : null; if (sl.type === 'flash') { if (ord.used) advanceOrd(false); ord.used = true; } }, 'rot');
                 renderNext(); safe(renderSide, 'side'); pushBoardInk(); simRespondQuiz(); setTimeout(updateTurn, 150);
             });
             P.on('state', () => { clearTimeout(nx); nx = setTimeout(renderNext, 80); safe(renderSide, 'side'); renderMarks(); });

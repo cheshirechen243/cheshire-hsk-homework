@@ -13,6 +13,7 @@
         grow: { label: '放大淡入', dirs: false },
         float: { label: '浮入', dirs: false },
         compress: { label: '压缩', dirs: false },
+        randombar: { label: '随机线条', dirs: false },
         play: { label: '播放媒体', dirs: false, mediaOnly: true },
     };
     CW.DIRS = { l: '自左侧', r: '自右侧', t: '自顶部', b: '自底部' };
@@ -41,7 +42,21 @@
         return steps;
     };
 
+    function seeded(seed) { let h = 2166136261 >>> 0; for (const c of String(seed)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; } return () => { h ^= h << 13; h >>>= 0; h ^= h >>> 17; h ^= h << 5; h >>>= 0; return h / 4294967296; }; }
+    function barFrames(e, el) {
+        const W = Math.max(1, el.offsetWidth || parseFloat(el.style.width) || (el.parentElement && el.parentElement.offsetWidth) || 600), H = Math.max(1, el.offsetHeight || parseFloat(el.style.height) || 60);
+        const N = Math.max(6, Math.min(16, Math.round(H / 16))), sh = H / N, rnd = seeded(e.id || e.obj || 'x');
+        const order = Array.from({ length: N }, (_, i) => i).sort(() => rnd() - .5);
+        const start = i => order[i] / N * 0.7, K = 14, out = [];
+        for (let k = 0; k <= K; k++) {
+            const off = k / K; let d = '';
+            for (let i = 0; i < N; i++) { const p = Math.max(0, Math.min(1, (off - start(i)) / 0.3)); d += 'M0 ' + (i * sh).toFixed(1) + 'h' + W + 'v' + (p * sh + (p >= 1 ? .6 : 0)).toFixed(1) + 'h-' + W + 'Z'; }
+            out.push({ offset: off, clipPath: "path('" + d + "')", visibility: 'visible' });
+        }
+        return out;
+    }
     function frames(e, el, stage, cls) {
+        if (e.fx === 'randombar') { const kf = barFrames(e, el); return cls === 'out' ? kf.slice().reverse().map((f, i) => Object.assign({}, f, { offset: i / (kf.length - 1) })) : kf; }
         const W = stage.W, H = stage.H;
         const g = { x: parseFloat(el.style.left) || 0, y: parseFloat(el.style.top) || 0, w: parseFloat(el.style.width) || 0, h: parseFloat(el.style.height) || 0 };
         const V = { visibility: 'visible' };

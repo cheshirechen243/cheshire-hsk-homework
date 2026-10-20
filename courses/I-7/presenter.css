@@ -2,7 +2,7 @@
 #zl{position:absolute;inset:0;transition:transform .35s ease;}
 #board{position:absolute;inset:0;z-index:5;display:none;} #board.on{display:block;} #board.black{background:#1d2a22;} #board.white{background:#fffdf8;}
 #ink{position:absolute;left:0;top:0;width:1920px;height:1080px;z-index:6;pointer-events:none;touch-action:none;}
-#laser{position:absolute;z-index:7;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;background:radial-gradient(circle,#fff 0 18%,#ff2a2a 22% 55%,rgba(255,42,42,0) 72%);box-shadow:0 0 22px 8px rgba(255,40,40,.55);display:none;pointer-events:none;}
+#laser{position:absolute;z-index:7;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;background:radial-gradient(circle,#ff2a2a 0 55%,rgba(255,42,42,0) 72%);box-shadow:0 0 22px 8px rgba(255,40,40,.55);display:none;pointer-events:none;}
 body.mirror .qz,body.mirror .cz{pointer-events:none !important;}
 
 /* student: question from the teacher */

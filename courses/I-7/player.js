@@ -128,8 +128,8 @@
         const chars = Array.from(word.han || '').filter(CW.isCJK);
         if (!chars.length) return;
         let idx = Math.max(0, chars.indexOf(startChar)), writer = null, outline = true, shown = true, evn = 0, lastN = -1;
-        const emit = ev => { if (remote) return; evn++; modalSync = { w: { han: word.han, py: word.py, hv: word.hv, vi: word.vi }, c: chars[idx], ev, n: evn }; post(); };
-        const S = Math.max(240, Math.min(innerHeight * 0.44, innerWidth * 0.8, 480)) | 0;
+        const emit = (ev, extra) => { if (remote) return; evn++; modalSync = Object.assign({ w: { han: word.han, py: word.py, hv: word.hv, vi: word.vi }, c: chars[idx], ev, n: evn }, extra || {}); post(); };
+        const S = 540;                                  // the window is part of the 1920x1080 slide: it scales with it
         const host = h('div', { class: 'swrap', style: { width: S + 'px', height: S + 'px' } });
         const msg = h('div', { class: 'smsg' });
         const tabs = h('div', { class: 'schars' });
@@ -149,12 +149,39 @@
         }
         chars.forEach((c, i) => tabs.append(h('button', { onclick: () => { load(i); emit('load'); } }, c)));
         const total = () => (strokes[chars[idx]] ? strokes[chars[idx]].strokes.length : '');
+        // read-only board that repeats what the teacher does: outline + finished strokes + the live pen trail
+        const NS = 'http://www.w3.org/2000/svg'; let watch = null;
+        const watchStart = () => {
+            const d = strokes[chars[idx]]; if (!d) return;
+            if (writer) { try { writer.cancelQuiz(); } catch (er) { /* ignore */ } }
+            const old = host.querySelector('svg'); if (old) old.style.visibility = 'hidden';
+            const prev = host.querySelector('.watch'); if (prev) prev.remove();
+            const wb = document.createElement('div'); wb.className = 'watch'; wb.style.cssText = 'position:absolute;inset:0;z-index:3;pointer-events:none';
+            const svg = document.createElementNS(NS, 'svg'); svg.setAttribute('viewBox', '-70 -70 1164 1164'); svg.style.cssText = 'width:100%;height:100%;display:block';
+            const mk = (fill, op) => { const g = document.createElementNS(NS, 'g'); g.setAttribute('transform', 'scale(1,-1) translate(0,-900)'); svg.appendChild(g); return g; };
+            const base = mk(); d.strokes.forEach(p => { const e = document.createElementNS(NS, 'path'); e.setAttribute('d', p); e.setAttribute('fill', '#e6d8c8'); base.appendChild(e); });
+            const done = mk(), trail = document.createElementNS(NS, 'polyline');
+            trail.setAttribute('fill', 'none'); trail.setAttribute('stroke', '#432B20'); trail.setAttribute('stroke-width', '34'); trail.setAttribute('stroke-linecap', 'round'); trail.setAttribute('stroke-linejoin', 'round'); svg.appendChild(trail);
+            wb.appendChild(svg); host.appendChild(wb); host.style.pointerEvents = 'none'; watch = { d, done, trail, k: 0 }; setMsg('老师在写 · Cô đang viết…');
+        };
+        const watchTrail = tr => { if (!watch) watchStart(); if (!watch) return; watch.trail.setAttribute('points', (tr || []).map(p => ((p[0] * 1164) - 70).toFixed(0) + ',' + ((p[1] * 1164) - 70).toFixed(0)).join(' ')); };
+        const watchStroke = k => { if (!watch) watchStart(); if (!watch) return; watch.trail.setAttribute('points', ''); while (watch.k < k && watch.k < watch.d.strokes.length) { const e = document.createElementNS(NS, 'path'); e.setAttribute('d', watch.d.strokes[watch.k]); e.setAttribute('fill', '#5F2C16'); watch.done.appendChild(e); watch.k++; } setMsg('✓ 第 ' + k + ' 笔'); };
+        const watchMiss = () => { if (watch) watch.trail.setAttribute('points', ''); setMsg('再试一次 · Thử lại'); };
+        const watchEnd = m => { if (watch) watch.trail.setAttribute('points', ''); setMsg('🎉 完成！共错 ' + (m || 0) + ' 次'); };
         const demo = () => { emit('demo'); writer.cancelQuiz(); setMsg('观看笔顺…'); writer.animateCharacter({ onComplete: () => setMsg(hzInfoText(chars[idx]) || ('共 ' + total() + ' 画')) }); };
         const loop = () => { emit('loop'); writer.cancelQuiz(); setMsg('循环示范（点“重置”停止）'); writer.loopCharacterAnimation(); };
         const practice = () => {
             emit('practice'); host.style.pointerEvents = '';
+            if (!remote && !host._trailOn) {                       // teacher: send the pen trail (normalised 0..1) about every 120 ms
+                host._trailOn = true; let tr = [], last = 0;
+                const nrm = ev => { const r = host.getBoundingClientRect(); return [+((ev.clientX - r.left) / r.width).toFixed(3), +((ev.clientY - r.top) / r.height).toFixed(3)]; };
+                host.addEventListener('pointerdown', ev => { tr = [nrm(ev)]; });
+                host.addEventListener('pointermove', ev => { if (!tr.length || !(ev.buttons & 1)) return; tr.push(nrm(ev)); const n = Date.now(); if (n - last > 120) { last = n; emit('trail', { tr: tr.slice() }); } });
+                const endTr = () => { if (tr.length) { tr = []; } };
+                host.addEventListener('pointerup', endTr); host.addEventListener('pointercancel', endTr);
+            }
             let miss = 0; setMsg('请按笔顺一笔一笔写（写错会有提示）');
-            writer.quiz({ onMistake: () => { miss++; setMsg('再试一次 · Thử lại（' + miss + '）'); }, onCorrectStroke: d => setMsg('✓ 第 ' + (d.strokeNum + 1) + ' 笔'), onComplete: d => { host.style.pointerEvents = 'none'; try { host.dispatchEvent(new MouseEvent('mouseup', { bubbles: true })); host.dispatchEvent(new TouchEvent('touchend', { bubbles: true })); } catch (e) { /* ignore */ } setMsg('🎉 完成！共错 ' + d.totalMistakes + ' 次'); if (idx + 1 < chars.length) setTimeout(() => { load(idx + 1); if (!remote) emit('load'); practice(); }, 900); if (STUDENT && !MIRROR && live.sendResp) live.sendResp(slides[S.i].id, 'w:' + chars[idx], d.totalMistakes, 'write'); } });
+            writer.quiz({ onMistake: () => { miss++; setMsg('再试一次 · Thử lại（' + miss + '）'); emit('miss', { k: miss }); }, onCorrectStroke: d => { setMsg('✓ 第 ' + (d.strokeNum + 1) + ' 笔'); emit('stroke', { k: d.strokeNum + 1 }); }, onComplete: d => { emit('done', { m: d.totalMistakes }); host.style.pointerEvents = 'none'; try { host.dispatchEvent(new MouseEvent('mouseup', { bubbles: true })); host.dispatchEvent(new TouchEvent('touchend', { bubbles: true })); } catch (e) { /* ignore */ } setMsg('🎉 完成！共错 ' + d.totalMistakes + ' 次'); if (idx + 1 < chars.length) setTimeout(() => { load(idx + 1); if (!remote) emit('load'); practice(); }, 900); if (STUDENT && !MIRROR && live.sendResp) live.sendResp(slides[S.i].id, 'w:' + chars[idx], d.totalMistakes, 'write'); } });
         };
         const body = h('div', { class: 'stroke' }, chars.length > 1 ? tabs : null, host, msg,
             h('div', { class: 'sbtns' }, mk('▶ 示范', demo, 'primary'), mk('🔁 循环', loop), mk('✍ 我来写', practice),
@@ -178,7 +205,7 @@
                 const ci = chars.indexOf(m.c);
                 if (m.n === lastN) return; lastN = m.n;
                 if (m.ev === 'load') { if (ci >= 0) load(ci); }
-                else { if (ci >= 0 && ci !== idx) load(ci); if (!writer) return; if (m.ev === 'demo') demo(); else if (m.ev === 'loop') loop(); else if (m.ev === 'practice') { if (!MIRROR) practice(); else demo(); } else if (m.ev === 'shape') { shown = !shown; shown ? writer.showCharacter() : writer.hideCharacter(); } else if (m.ev === 'outline') { outline = !outline; outline ? writer.showOutline() : writer.hideOutline(); } }
+                else { if (ci >= 0 && ci !== idx) load(ci); if (!writer) return; if (m.ev === 'demo') demo(); else if (m.ev === 'loop') loop(); else if (m.ev === 'practice') { watch = null; watchStart(); } else if (m.ev === 'trail') watchTrail(m.tr); else if (m.ev === 'stroke') watchStroke(m.k); else if (m.ev === 'miss') watchMiss(); else if (m.ev === 'done') watchEnd(m.m); else if (m.ev === 'shape') { shown = !shown; shown ? writer.showCharacter() : writer.hideCharacter(); } else if (m.ev === 'outline') { outline = !outline; outline ? writer.showOutline() : writer.hideOutline(); } }
             },
         };
         ensureHzInfo(() => { load(Math.max(0, chars.indexOf(startChar))); emit('load'); });
@@ -188,7 +215,7 @@
         if (!strokeCtl || strokeCtl.han !== m.w.han) { openStroke(m.w, m.c, true); }
         setTimeout(() => { if (strokeCtl) strokeCtl.apply(m); }, 250);
     }
-    CW.openStroke = openStroke;
+    CW.openStroke = openStroke; CW.strokeCtl = () => strokeCtl;
 
     // ------------------------------------------------------------ slides
     const slides = project.slides;
@@ -498,7 +525,7 @@
     function dialogView(slide) {
         const d = slide.dialog || { lines: [] };
         const prose = d.lines.length > 0 && d.lines.every(l => !(l.speaker || l.name));
-        let py = store.get('textPy', false), fsz = store.get('textSz', 2.3), hl = store.get('textHl', false);
+        let py = d.py != null ? !!d.py : store.get('textPy', false), fsz = d.fz ? +(2.3 * d.fz).toFixed(2) : store.get('textSz', 2.3), hl = store.get('textHl', false);
         let ind = store.get('textInd', true), plh = store.get('textLh', 1.9);
         const vocab = Array.from(new Set(slides.filter(s => s.vocab && s.vocab.han).flatMap(s => String(s.vocab.han).split(/[\/／、]/)))).filter(Boolean).sort((a, b) => b.length - a.length);
         const dlg = h('div', { class: 'dlg' + (py ? '' : ' nopy') + (hl ? ' hl' : '') });
@@ -525,6 +552,7 @@
             dlg.innerHTML = ''; d.lines.forEach((l, i) => dlg.append(lineEl(l, i)));
             dlg.classList.toggle('nopy', !py); dlg.classList.toggle('hl', hl);
             dlg.style.setProperty('--ind', ind ? '2em' : '0'); dlg.style.setProperty('--plh', plh);
+            dlg.style.setProperty('--avs', d.avs || 1.3); dlg.style.setProperty('--lgap', ((d.gap != null ? d.gap : 1.6) * .625) + 'rem');
         }
         draw();
         const sv = (k, v) => { if (!STUDENT) store.set(k, v); };
@@ -536,7 +564,7 @@
             prose ? h('button', { class: 'btn sm', title: '行距小一点', onclick: () => { plh = Math.max(1.2, +(plh - .15).toFixed(2)); sv('textLh', plh); draw(); post(); } }, '≡−') : null,
             prose ? h('button', { class: 'btn sm', title: '行距大一点', onclick: () => { plh = Math.min(3.2, +(plh + .15).toFixed(2)); sv('textLh', plh); draw(); post(); } }, '≡+') : null,
             h('button', { class: 'btn sm', title: '字小一点', onclick: () => { fsz = Math.max(1.4, fsz - .2); sv('textSz', fsz); draw(); post(); } }, 'A−'),
-            h('button', { class: 'btn sm', title: '字大一点', onclick: () => { fsz = Math.min(4, fsz + .2); sv('textSz', fsz); draw(); post(); } }, 'A+'));
+            h('button', { class: 'btn sm', title: '字大一点', onclick: () => { fsz = Math.min(6, fsz + .2); sv('textSz', fsz); draw(); post(); } }, 'A+'));
         let scT = 0;
         if (ROLE === 'teacher') dlg.addEventListener('scroll', () => { clearTimeout(scT); scT = setTimeout(post, 120); });
         const dstate = () => ({ py, hl, fsz, ind, plh, sc: dlg.scrollHeight > dlg.clientHeight ? +(dlg.scrollTop / (dlg.scrollHeight - dlg.clientHeight)).toFixed(4) : 0 });
@@ -732,7 +760,7 @@
           <aside id="outline"></aside>
           <main id="view"></main>
           <nav id="dock"><button class="nav" id="prev" title="上一步 ←">◀</button><div id="progress"><i></i></div><div id="pos"></div><button class="nav" id="next" title="下一步 →">▶</button></nav>
-          </div></div><div id="modal-root"></div>`;
+          <div id="modal-root"></div></div></div>`;
         if (embed) document.body.classList.add('embed');
         applyScale(); addEventListener('resize', applyScale); document.addEventListener('fullscreenchange', applyScale);
         buildOutline();

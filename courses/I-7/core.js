@@ -166,7 +166,8 @@
         img.src = url(ctx, o.src);
         img.alt = '';
         const flip = [o.flipX ? 'scaleX(-1)' : '', o.flipY ? 'scaleY(-1)' : ''].filter(Boolean).join(' ');
-        Object.assign(img.style, { position: 'absolute', width: (100 / iw) + '%', height: (100 / ih) + '%', left: (-c.l / iw * 100) + '%', top: (-c.t / ih * 100) + '%', maxWidth: 'none', display: 'block', transform: flip });
+        Object.assign(img.style, { position: 'absolute', width: (100 / iw) + '%', height: (100 / ih) + '%', left: (-c.l / iw * 100) + '%', top: (-c.t / ih * 100) + '%', maxWidth: 'none', display: 'block' });
+        if (flip) wrap.style.transform = flip;                     // flip the cropped picture as a whole (the crop is defined before flipping)
         const ws = wrap.style;
         if (o.shape === 'ellipse') ws.borderRadius = '50%';
         else if (o.radius != null) ws.borderRadius = typeof o.radius === 'number' ? o.radius + 'px' : o.radius;
