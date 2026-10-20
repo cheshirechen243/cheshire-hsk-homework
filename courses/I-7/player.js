@@ -235,6 +235,7 @@
         const stage = CW.makeStage(project, slide, Object.assign({ mode: 'player', resolve }, opts || {}));
         stage.style.transform = `scale(${SC})`; stage.style.transformOrigin = '0 0';
         const holder = h('div', { class: 'slideview' + (opts && opts.overlay ? ' overlay' : '') }, stage);
+        setTimeout(() => $$('img[data-once]', stage).forEach(im => CW.playOnce(im)), 0);          // the cover animation starts now (and again whenever this page is shown again)
         const runner = new CW.AnimRunner(stage, slide, W, H);
         let audio = null;
         const interactive = slide.objects.some(o => o.quiz || o.cloze);
@@ -313,14 +314,14 @@
             if (!sp._raw) sp._raw = sp.textContent;
             if (sp.classList.contains('ok') || sp.dataset.locked) return;
             if (STUDENT && CWP.canAnswer && !CWP.canAnswer('c', host.dataset.id + ':' + i)) return;
-            const fill = (txt, cls) => { sp.textContent = txt; sp.classList.remove('ok', 'bad', 'sel'); if (cls) sp.classList.add(cls); if (STUDENT && live.sendResp && txt && txt !== sp._raw) live.sendResp(slide.id, 'c:' + host.dataset.id + ':' + i, txt, 'cloze'); };
-            const key = ans[i];
+            const kid = 'c:' + host.dataset.id + ':' + i;
+            const fill = (txt, cls) => { sp.textContent = txt; sp.classList.remove('ok', 'bad', 'sel'); if (cls) sp.classList.add(cls); if (txt && txt !== sp._raw) sp.dataset.v = txt; else delete sp.dataset.v; if (STUDENT && live.sendResp && txt && txt !== sp._raw) live.sendResp(slide.id, kid, txt, 'cloze'); };
+            const setAns = v => { if (STUDENT) return; (CZ.ans[slide.id] = CZ.ans[slide.id] || {})[kid] = v; saveCz(); };     // the teacher's pick = the right answer
             if (!bank.length) {
-                if (ev0 && ev0.shiftKey && key) { fill(key, 'sel'); return; }
                 if (sp.querySelector('input')) return;
                 const inp = h('input', { class: 'czin', type: 'text', style: { width: Math.max(4, sp._raw.length) + 'ch' } });
                 sp.textContent = ''; sp.append(inp); inp.focus();
-                const done = () => { const v = inp.value.trim(); if (!v) { fill(sp._raw, ''); return; } if (!key) { fill(v, 'sel'); return; } if (v.toLowerCase() === String(key).toLowerCase()) fill(v, 'ok'); else { fill(v, 'bad'); setTimeout(() => { if (sp.classList.contains('bad')) fill(sp._raw, ''); }, 1200); } };
+                const done = () => { const v = inp.value.trim(); if (!v) { fill(sp._raw, ''); return; } setAns({ t: v }); fill(v, 'sel'); };
                 inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') done(); if (e.key === 'Escape') fill(sp._raw, ''); });
                 inp.addEventListener('blur', done); inp.addEventListener('click', e => e.stopPropagation());
                 return;
@@ -330,9 +331,7 @@
             const pop = h('div', { class: 'czpop' }, bank.map(b => h('button', {
                 onclick: ev => {
                     ev.stopPropagation(); closePop();
-                    if (!key) { fill(b.t, 'sel'); return; }
-                    if (String(b.k).toLowerCase() === String(key).toLowerCase() || b.t === key) fill(b.t, 'ok');
-                    else { fill(b.t, 'bad'); setTimeout(() => { if (sp.classList.contains('bad')) fill(sp._raw, ''); }, 900); }
+                    setAns({ k: b.k, t: b.t }); fill(b.t, 'sel');
                 },
             }, h('b', null, b.k), ' ' + b.t)));
             document.body.append(pop);
@@ -342,6 +341,10 @@
             pop.style.top = (below ? r.bottom + 8 : r.top - pop.offsetHeight - 8) + 'px';
             setTimeout(() => { if (!pop.isConnected) return; document.addEventListener('click', closePop, { once: true }); popOff = () => document.removeEventListener('click', closePop); }, 0);
         }
+        if (PRES) setTimeout(() => {
+            const sa = czAnswers(slide);
+            $$('.cz', stage).forEach(sp => { const host = sp.closest('.o'), a = sa['c:' + host.dataset.id + ':' + sp.dataset.i]; if (a && a.t) { if (!sp._raw) sp._raw = sp.textContent; sp.textContent = a.t; sp.classList.add('sel'); } });
+        }, 0);
         if (ROLE === 'teacher' && stage._scwin) { let st = 0; stage._scwin.addEventListener('scroll', () => { clearTimeout(st); st = setTimeout(post, 120); }); }
         return {
             el: holder, runner,
@@ -358,7 +361,7 @@
             scrollBy(dir) { const w = stage._scwin; if (!w || w.scrollHeight <= w.clientHeight + 2) return false; w.scrollBy({ top: dir * 160, behavior: 'smooth' }); return true; },
             quizReveal(data) { if (data === undefined && CWP.quizData) { data = CWP.quizData(slide); CWP.rvd = data; } revealNow(data); }, hasQuiz: slide.objects.some(o => o.quiz), slide,
             reset() { const had = stage.dataset.revealed; delete stage.dataset.revealed; CWP.rvd = null; $$('.qframe', stage).forEach(x => x.remove()); $$('.cz', stage).forEach(x => { if (x._raw) x.textContent = x._raw; x.classList.remove('ok', 'bad', 'sel'); }); if (had && ROLE === 'teacher') post(); },
-            destroy() { closePop(); $$('audio,video', holder).forEach(m => m.pause()); hideBar(); videoSync = null; },
+            destroy() { closePop(); if (CZ.rv && CZ.rv.slide === slide.id) CZ.rv = null; $$('audio,video', holder).forEach(m => m.pause()); hideBar(); videoSync = null; },
             next() { return runner.next(); }, prev() { return runner.prev(); },
             finish() { runner.finish(); },
             state: () => { const w = stage._scwin; return { k: runner.k, total: runner.total, rv: !!stage.dataset.revealed, sc: w && w.scrollHeight > w.clientHeight ? +(w.scrollTop / (w.scrollHeight - w.clientHeight)).toFixed(4) : null }; },
@@ -696,6 +699,30 @@
 
     // ---- the assistant's html pages (flash / dialogue / quiz) inside the slide: teacher's clicks, changes and pen strokes are replayed on the other screens
     const HV = { id: '', ev: [] }, HQ = { id: '', data: null };
+    // fill-in-the-blank pages: the teacher's choices are the right answers (kept per lesson); students are judged against them when the answers are published
+    const CZ = { ans: {}, rv: null };
+    const CZKEY = 'cwcz:' + (project.meta && (project.meta.source || project.meta.title) || 'x');
+    try { CZ.ans = JSON.parse(localStorage.getItem(CZKEY) || '{}') || {}; } catch (e) { CZ.ans = {}; }
+    function saveCz() { try { localStorage.setItem(CZKEY, JSON.stringify(CZ.ans)); } catch (e) { /* ignore */ } }
+    function czAnswers(sl) {
+        const out = Object.assign({}, CZ.ans[sl.id] || {});
+        CW.walkObjs(sl.objects || [], o => { if (!o.cloze) return; const bank = o.cloze.bank || []; (o.cloze.ans || []).forEach((a, i) => { const kid = 'c:' + o.id + ':' + i; if (a && !out[kid]) { const b = bank.find(x => String(x.k).toLowerCase() === String(a).toLowerCase() || x.t === a); out[kid] = b ? { k: b.k, t: b.t } : { t: String(a) }; } }); });
+        return out;
+    }
+    function applyCz(rv) {
+        if (!rv || !slides[S.i] || rv.slide !== slides[S.i].id) return;
+        $$('.cz').forEach(sp => {
+            const host = sp.closest('.o'), a = rv.ans['c:' + host.dataset.id + ':' + sp.dataset.i]; if (!a || !a.t) return;
+            if (!sp._raw) sp._raw = sp.textContent;
+            const mine = sp.dataset.v, plain = STUDENT && !MIRROR;
+            if (plain && mine && mine !== a.t) { sp.textContent = mine; sp.classList.remove('sel', 'ok'); sp.classList.add('bad'); sp.title = '正确答案：' + a.t; }
+            else { sp.textContent = a.t; sp.classList.remove('sel', 'bad'); sp.classList.add('ok'); }
+            sp.dataset.locked = '1';
+        });
+    }
+    CWP.applyCz = applyCz; CWP.czAnswersOf = czAnswers;
+    CWP.czPublish = () => { const sl = slides[S.i]; if (!sl || ROLE !== 'teacher') return; CZ.rv = { slide: sl.id, ans: czAnswers(sl) }; applyCz(CZ.rv); post(); };
+    CWP.czPublished = () => !!(CZ.rv && slides[S.i] && CZ.rv.slide === slides[S.i].id);
     let pendingHv = null, pendingHq = null;
     function htmlFrame() { return $('.o-html iframe', document); }
     function applyHtml(hv, hq) {
@@ -740,7 +767,7 @@
     CWP.htmlQuizInfo = () => { const fr = htmlFrame(); return fr && fr._quiz ? fr._quiz : null; };
     CWP.htmlQuizDone = () => !!HQ.data;
     CWP.htmlSend = msg => { const fr = htmlFrame(); if (fr && fr._ready) fr.contentWindow.postMessage(Object.assign({ cwb: 1 }, msg), '*'); };
-    const fullState = () => Object.assign({}, (cur && cur.state && cur.state()) || {}, { hq: HQ.data ? { id: HQ.id, data: HQ.data } : null, hv: HV.id ? { id: HV.id, ev: HV.ev } : null, m: modalSync, au: audioSync, vd: videoSync, rvd: CWP.rvd, tn: CWP.turn || null, fl: CWP.fills || null, cl: CWP.cls || null });
+    const fullState = () => Object.assign({}, (cur && cur.state && cur.state()) || {}, { cz: CZ.rv, hq: HQ.data ? { id: HQ.id, data: HQ.data } : null, hv: HV.id ? { id: HV.id, ev: HV.ev } : null, m: modalSync, au: audioSync, vd: videoSync, rvd: CWP.rvd, tn: CWP.turn || null, fl: CWP.fills || null, cl: CWP.cls || null });
 
     // ------------------------------------------------------------ live class (课堂): teacher writes the state, students follow
     const live = { ref: null, timer: null, db: null, user: null, session: null, members: {}, resp: {}, sendResp: null };
@@ -753,7 +780,7 @@
     function liveApply(state) {
         if (!state || !STUDENT) return;
         if (state.i !== S.i) goTo(state.i);
-        setTimeout(() => { const st = state.st || {}; if (cur && cur.sync) cur.sync(st); applyModal(st.m); applyAudio(st.au); applyVideo(st.vd); applyHtml(st.hv, st.hq || null); CWP.emit('applied', st); }, 80);
+        setTimeout(() => { const st = state.st || {}; if (cur && cur.sync) cur.sync(st); applyModal(st.m); applyAudio(st.au); applyVideo(st.vd); applyHtml(st.hv, st.hq || null); applyCz(st.cz); CWP.emit('applied', st); }, 80);
     }
     async function liveInit() {
         if (MIRROR && lc) { lc.onmessage = e => { const m = e.data || {}; if (m.t === 'state') liveApply(m.state); else CWP.emit('msg', m); }; try { lc.postMessage({ t: 'hello' }); } catch (e) { /* ignore */ } return; }

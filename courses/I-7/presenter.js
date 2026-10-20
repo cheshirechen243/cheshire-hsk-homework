@@ -338,8 +338,8 @@
             while (k < lines.length && /^(本义|演变)[：:]/.test(lines[k].trim())) { const mm = /^(本义|演变)[：:]\s*(.*)$/.exec(lines[k].trim()); if (mm[1] === '本义') card.ben = mm[2]; else card.yan = mm[2]; k++; }
             cards.push(card); cardNo++;
         }
-        const html = cards.map(c => '<div class="zyc"><div class="zych">' + esc(c.ch) + '</div><div class="zycb"><span class="zytag">' + esc(c.type) + '</span>' +
-            (c.parts ? '<div class="zyp">' + esc(c.parts) + '</div>' : '') + (c.ben ? '<div><b>本义：</b>' + esc(c.ben) + '</div>' : '') + (c.yan ? '<div><b>演变：</b>' + esc(c.yan) + '</div>' : '') + '</div></div>').join('');
+        const html = cards.map(c => '<div class="zyc"><div class="zyh"><span class="zych">' + esc(c.ch) + '</span><span class="zyt">' + esc(c.type) + '</span>' + (c.parts ? '<span class="zyp">' + esc(c.parts) + '</span>' : '') + '</div>' +
+            (c.ben ? '<div class="zyl"><b>本义：</b>' + esc(c.ben) + '</div>' : '') + (c.yan ? '<div class="zyl"><b>演变：</b>' + esc(c.yan) + '</div>' : '') + '</div>').join('');
         const other = rest.join('\n').trim();
         return html + (other ? '<div class="zyo">' + esc(other).replace(/\n/g, '<br>') + '</div>' : '');
     }
@@ -472,7 +472,15 @@
         lastQA = ''; sendUi({ q: activeQ, qa: [] }); simRespondQ(); renderSide();
     }
     let autoOn = true;
+    function checkCz() {
+        if (!PRES || !autoOn || P.czPublished()) return;
+        const sl = slides[P.S], stage = $('#view .cw-stage'); if (!stage || (pageMode[sl.id] || 'class') === 'order') return;
+        const keys = $$('.cz', stage).map(sp => 'c:' + sp.closest('.o').dataset.id + ':' + sp.dataset.i); if (!keys.length) return;
+        const on = onlineEmails(); if (!on.length) return;
+        if (on.every(em => keys.every(k => respFor(sl.id, k).some(r => r.email === em)))) P.czPublish();
+    }
     function checkAuto() {
+        safe(checkCz, 'cz');
         if (PRES && autoOn && /^html:quiz/.test((slides[P.S] || {}).tag || '') && P.htmlQuizInfo && P.htmlQuizInfo() && !P.htmlQuizDone()) {
             const sl = slides[P.S], info = P.htmlQuizInfo(), on = onlineEmails();
             if (info.length && on.length && on.every(em => info.every((q, qi) => respFor(sl.id, 'q:' + (qi + 1)).some(r => r.email === em)))) P.htmlQuizReveal();
@@ -494,6 +502,20 @@
         });
     }
     function simRespondQuiz() {
+        if (simOn && $('#view .cw-stage .cz') && (pageMode[(slides[P.S] || {}).id] || 'class') !== 'order') {        // fill-in-the-blank page: the simulated students fill the blanks too
+            const sl1 = slides[P.S];
+            SIMS.forEach((s, k) => setTimeout(() => {
+                if (slides[P.S] !== sl1) return;
+                $$('#view .cw-stage .cz').forEach(sp => {
+                    const host = sp.closest('.o'), key = 'c:' + host.dataset.id + ':' + sp.dataset.i;
+                    if (simResp.some(r => r.email === s.email && r.slide === sl1.id && r.key === key)) return;
+                    const o = (CW.findObj(sl1.objects, host.dataset.id) || {}).obj, bank = (o && o.cloze && o.cloze.bank) || [];
+                    const val = bank.length ? bank[Math.floor(Math.random() * bank.length)].t : '（模拟回答）';
+                    simResp.push({ slide: sl1.id, key, val, email: s.email, name: s.name, ts: Date.now(), type: 'cloze' });
+                });
+                renderSide(); checkAuto();
+            }, 2000 + k * 1500));
+        }
         if (simOn && /^html:quiz/.test((slides[P.S] || {}).tag || '')) {                 // the quiz page made by the assistant: the simulated students answer too
             const sl0 = slides[P.S];
             SIMS.forEach((s, k) => setTimeout(() => {
@@ -637,6 +659,26 @@
                 };
             }
         }, 'notes');
+        safe(() => {
+            let bx = $('#pcz'); if (!bx) { bx = h('div', { id: 'pcz', style: { margin: '8px 0' } }); const sec = $('#pqsec'); if (sec) sec.parentNode.insertBefore(bx, sec); }
+            const has = !!$('#view .cw-stage .cz'); bx.innerHTML = '';
+            if (has) bx.append(h('button', { class: 'btn sm', title: '你在讲者视图选的就是正确答案；公布后学生那边显示对错', onclick: () => { P.czPublish(); renderSide(); } }, P.czPublished() ? '✓ 已公布填空答案' : '公布填空答案（学生那边显示对错）'));
+        }, 'czbtn');
+        safe(() => {                       // what every student answered in each blank (grouped by answer, with the avatars)
+            let bx = $('#pczans'); if (!bx) { bx = h('div', { id: 'pczans', style: { margin: '6px 0 10px' } }); const a = $('#pcz'); if (a) a.after(bx); }
+            const stage = $('#view .cw-stage'), czs = stage ? $$('.cz', stage) : []; bx.innerHTML = '';
+            if (!czs.length) return;
+            const sl = slides[P.S], ans = P.czAnswersOf ? P.czAnswersOf(sl) : {};
+            bx.append(h('h4', null, '学生的填空答案'));
+            czs.forEach((sp, n) => {
+                const key = 'c:' + sp.closest('.o').dataset.id + ':' + sp.dataset.i, rows = respFor(sl.id, key), groups = {};
+                rows.forEach(r => { (groups[r.val] = groups[r.val] || []).push(avOf(r.email)); });
+                const right = (ans[key] || {}).t;
+                bx.append(h('div', { class: 'czrow' }, h('b', null, (n + 1) + '. '),
+                    Object.keys(groups).length ? Object.keys(groups).map(v => h('span', { class: 'czg' + (right ? (v === right ? ' ok' : ' no') : '') }, v + ' ', groups[v].map(av => h('img', { src: P.avatarUrl(av), alt: '' })))) : h('i', null, '还没有人答'),
+                    right ? h('span', { class: 'czr' }, '　✓ ' + right) : null));
+            });
+        }, 'czans');
         safe(() => {
             const qs = questionsOf(sl), pq = $('#pq'); pq.innerHTML = '';
             $('#pqsec').style.display = qs.length ? '' : 'none';
