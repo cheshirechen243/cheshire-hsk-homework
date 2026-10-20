@@ -45,12 +45,12 @@
     function seeded(seed) { let h = 2166136261 >>> 0; for (const c of String(seed)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; } return () => { h ^= h << 13; h >>>= 0; h ^= h >>> 17; h ^= h << 5; h >>>= 0; return h / 4294967296; }; }
     function barFrames(e, el) {
         const W = Math.max(1, el.offsetWidth || parseFloat(el.style.width) || (el.parentElement && el.parentElement.offsetWidth) || 600), H = Math.max(1, el.offsetHeight || parseFloat(el.style.height) || 60);
-        const N = Math.max(6, Math.min(16, Math.round(H / 16))), sh = H / N, rnd = seeded(e.id || e.obj || 'x');
+        const N = Math.max(10, Math.min(36, Math.round(H / 7))), sh = H / N, rnd = seeded(e.id || e.obj || 'x');
         const order = Array.from({ length: N }, (_, i) => i).sort(() => rnd() - .5);
-        const start = i => order[i] / N * 0.7, K = 14, out = [];
+        const start = i => order[i] / N * 0.6, K = 30, out = [];
         for (let k = 0; k <= K; k++) {
             const off = k / K; let d = '';
-            for (let i = 0; i < N; i++) { const p = Math.max(0, Math.min(1, (off - start(i)) / 0.3)); d += 'M0 ' + (i * sh).toFixed(1) + 'h' + W + 'v' + (p * sh + (p >= 1 ? .6 : 0)).toFixed(1) + 'h-' + W + 'Z'; }
+            for (let i = 0; i < N; i++) { const p = Math.max(0, Math.min(1, (off - start(i)) / 0.4)); d += 'M0 ' + (i * sh).toFixed(1) + 'h' + W + 'v' + (p * sh + (p >= 1 ? .6 : 0)).toFixed(1) + 'h-' + W + 'Z'; }
             out.push({ offset: off, clipPath: "path('" + d + "')", visibility: 'visible' });
         }
         return out;
@@ -137,7 +137,7 @@
                 }
                 ts.forEach(t => {
                     const kf = frames(e, t, this.dims, e.cls);
-                    const a = t.animate(kf, { duration: instant ? 1 : Math.max(1, dur), delay: instant ? 0 : start, fill: 'both', easing: 'ease-out' });
+                    const a = t.animate(kf, { duration: instant ? 1 : Math.max(1, dur), delay: instant ? 0 : start, fill: 'both', easing: e.fx === 'randombar' ? 'linear' : 'ease-out' });
                     this.anims.push(a);
                     if (instant) { try { a.finish(); } catch (er) { /* ignore */ } }
                 });

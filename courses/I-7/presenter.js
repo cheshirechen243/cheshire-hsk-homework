@@ -323,6 +323,7 @@
         const vis = ps.filter(p => getComputedStyle(p).visibility !== 'hidden');
         return vis[vis.length - 1] || null;
     }
+    const ROWMARK = !(project.meta && project.meta.ordSide);
     function placeMark(el, who, below) {
         const zl = $('#zl'); if (!zl || !el) return;
         const zr = zl.getBoundingClientRect(), ratio = zr.width / W, r = el.getBoundingClientRect();
@@ -345,12 +346,12 @@
         } else if (sl.type === 'flash') {
             const wrap = $('#view .fwrap'); const nx = o.list[o.nx];
             if (wrap) wrap.append(h('div', { class: 'ordtag row' }, h('div', null, h('img', { src: P.avatarUrl(cu.av), alt: '' }), h('span', null, cu.name)), nx && nx !== cu ? h('div', { class: 'nxt' }, h('img', { src: P.avatarUrl(nx.av), alt: '' }), h('span', null, nx.name)) : null));
-        }
+        } else if (ROWMARK && (sl.anim || []).some(a => a.para)) { const ep = exampleP(); placeMark(ep, cu); const nx = o.list[o.nx]; if (nx && nx !== cu) placeMark(ep, nx, true); }   // level 3: a person on every example row
     }
     P.on('advance', () => {
         if (!PRES) return;
         const sl = slides[P.S], tag = sl.tag || '';
-        if (sl.type === 'flash') { if (ord.used) advanceOrd(false); ord.used = true; }          // only flash cards change the person by themselves
+        if (sl.type === 'flash' || (ROWMARK && /vocab|grammar/.test(tag) && (sl.anim || []).some(a => a.para))) { if (ord.used) advanceOrd(false); ord.used = true; }          // levels 1/2 (meta.ordSide): only flash cards change the person by themselves
         renderMarks();
     });
 
@@ -647,7 +648,7 @@
         if (PRES) {
             buildPresenter(); bindEditing();
             P.on('render', () => {
-                safe(() => { const sl = slides[P.S], st = P.cur && P.cur.state ? P.cur.state() : null; if (sl.type === 'flash') { if (ord.used) advanceOrd(false); ord.used = true; } }, 'rot');
+                safe(() => { const sl = slides[P.S], st = P.cur && P.cur.state ? P.cur.state() : null; if (sl.type === 'flash' || (ROWMARK && /vocab|grammar/.test(sl.tag || '') && st && st.k >= 1 && (sl.anim || []).some(a => a.para))) { if (ord.used) advanceOrd(false); ord.used = true; } }, 'rot');
                 renderNext(); safe(renderSide, 'side'); pushBoardInk(); simRespondQuiz(); setTimeout(updateTurn, 150);
             });
             P.on('state', () => { clearTimeout(nx); nx = setTimeout(renderNext, 80); safe(renderSide, 'side'); renderMarks(); });

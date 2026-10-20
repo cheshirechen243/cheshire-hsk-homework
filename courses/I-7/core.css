@@ -22,7 +22,7 @@
 .qz[data-qm=tint]{border-radius:14px;} .qok[data-qm=tint] .bgl{background:rgba(62,138,87,.22) !important;border-radius:14px;} .qbad[data-qm=tint] .bgl{background:rgba(184,69,58,.2) !important;border-radius:14px;} .qsel[data-qm=tint] .bgl{background:rgba(64,116,155,.18) !important;border-radius:14px;}
 .qok[data-qm=tint]::after{content:'\2713';position:absolute;right:14px;top:50%;transform:translateY(-50%);font:700 34px sans-serif;color:#3E8A57;} .qbad[data-qm=tint]::after{content:'\2717';position:absolute;right:14px;top:50%;transform:translateY(-50%);font:700 34px sans-serif;color:#B8453A;}
 .qbad{animation:qshake .4s;} @keyframes qshake{20%{margin-left:-6px}40%{margin-left:6px}60%{margin-left:-4px}80%{margin-left:3px}}
-.cloze .cz{cursor:pointer;border-radius:6px;background:rgba(189,88,44,.10);padding:0 2px;} .cloze .cz:hover{background:rgba(189,88,44,.25);} .cloze .cz.ok{background:rgba(62,138,87,.15);color:#2e7d4a;font-weight:700;} .cloze .cz.bad{background:rgba(184,69,58,.15);color:#B8453A;font-weight:700;} .cloze .cz.sel{background:rgba(64,116,155,.15);color:#40749B;font-weight:700;}
+.cloze .cz{cursor:pointer;border-radius:6px;background:transparent;padding:0 2px;} .cloze .cz:hover{background:rgba(189,88,44,.10);} .cloze .cz.ok{background:rgba(62,138,87,.15);color:#2e7d4a;font-weight:700;} .cloze .cz.bad{background:rgba(184,69,58,.15);color:#B8453A;font-weight:700;} .cloze .cz.sel{background:rgba(64,116,155,.15);color:#40749B;font-weight:700;}
 
 
 /* PPT font names -> installed font files (Chrome groups HYYuJinLi 55U/65U/75U into one family) */

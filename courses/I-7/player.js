@@ -205,7 +205,7 @@
                 const ci = chars.indexOf(m.c);
                 if (m.n === lastN) return; lastN = m.n;
                 if (m.ev === 'load') { if (ci >= 0) load(ci); }
-                else { if (ci >= 0 && ci !== idx) load(ci); if (!writer) return; if (m.ev === 'demo') demo(); else if (m.ev === 'loop') loop(); else if (m.ev === 'practice') { watch = null; watchStart(); } else if (m.ev === 'trail') watchTrail(m.tr); else if (m.ev === 'stroke') watchStroke(m.k); else if (m.ev === 'miss') watchMiss(); else if (m.ev === 'done') watchEnd(m.m); else if (m.ev === 'shape') { shown = !shown; shown ? writer.showCharacter() : writer.hideCharacter(); } else if (m.ev === 'outline') { outline = !outline; outline ? writer.showOutline() : writer.hideOutline(); } }
+                else { if (ci >= 0 && ci !== idx) load(ci); if (!writer) return; if (m.ev === 'demo') demo(); else if (m.ev === 'loop') loop(); else if (m.ev === 'practice') { if (MIRROR) { watch = null; watchStart(); } else practice(); } else if (MIRROR && m.ev === 'trail') watchTrail(m.tr); else if (MIRROR && m.ev === 'stroke') watchStroke(m.k); else if (MIRROR && m.ev === 'miss') watchMiss(); else if (MIRROR && m.ev === 'done') watchEnd(m.m); else if (m.ev === 'shape') { shown = !shown; shown ? writer.showCharacter() : writer.hideCharacter(); } else if (m.ev === 'outline') { outline = !outline; outline ? writer.showOutline() : writer.hideOutline(); } }
             },
         };
         ensureHzInfo(() => { load(Math.max(0, chars.indexOf(startChar))); emit('load'); });
@@ -443,7 +443,13 @@
         const cfg = Object.assign({ shuffle: false, front: 'han', auto: false, showHv: true, size: 1 }, store.get('flashCfg', {}));
         if (STUDENT) { cfg.shuffle = false; cfg.front = 'han'; cfg.size = 1; }
         let order = [], pos = 0, flipped = false;
-        const root = h('div', { class: 'panel flash' });
+        const root = h('div', { class: 'panel flash' + (slide.flash && slide.flash.sent ? ' sent' : '') });
+        const fcfg = (slide.flash && slide.flash.frame) || null;
+        if (fcfg && fcfg.color) root.style.background = fcfg.color;
+        if (fcfg && fcfg.radius != null) root.style.borderRadius = (fcfg.radius * 0.6) + 'rem';
+        const SENT = !!(slide.flash && slide.flash.sent);
+        const lineOf = t => String(t).split(/[|｜\s]+/).filter(Boolean);
+        const maxLine = Math.max(6, ...words.map(w => Math.max(0, ...lineOf(w.han).map(l => Array.from(l).length))));
         function rebuild() {
             order = words.map((_, i) => i);
             if (cfg.shuffle) for (let a = order.length - 1; a > 0; a--) { const b = Math.floor(Math.random() * (a + 1)); [order[a], order[b]] = [order[b], order[a]]; }
@@ -489,6 +495,15 @@
                 h('button', { class: 'btn sm' + (showSet ? ' on' : ''), onclick: () => { showSet = !showSet; draw(); } }, '⚙ 设置'),
                 h('button', { class: 'btn sm', title: '字小一点', onclick: () => sizeTo(-.1) }, 'A−'), h('button', { class: 'btn sm', title: '字大一点', onclick: () => sizeTo(.1) }, 'A+'),
                 h('span', { class: 'fcount' }, (pos + 1) + ' / ' + order.length));
+            if (SENT) {
+                const sz = Math.min(5.6, 46 / maxLine) * (slide.flash.fz || 1);
+                const lines = lineOf(w.han).map(l => '<div class="sl">' + esc(l) + '</div>').join('');
+                const sc = h('div', { class: 'fcard sent' + (flipped ? ' flip' : ''), onclick: flip }, h('div', { class: 'sbody', style: { '--sz': sz + 'rem' } }, h('div', { class: 'shan', html: lines }), h('div', { class: 'sre', html: '<div class="py">' + esc(w.py || '') + '</div><div class="vi">' + esc(w.vi || '') + '</div>' })));
+                root.style.setProperty('--fz', cfg.size);
+                const scorner = h('div', { class: 'corner' }, spkBtn(String(w.han).replace(/[|｜]/g, '')));
+                root.append(tools, h('div', { class: 'fstage' }, h('button', { class: 'fnav', onclick: prevCard, title: '上一张 ←' }, '‹'), h('div', { class: 'fwrap' }, sc, scorner), h('button', { class: 'fnav', onclick: nextCard, title: '下一张 →' }, '›')));
+                return;
+            }
             const front = h('div', { class: 'fface front', html: faceHtml(w, 'front') });
             const back = h('div', { class: 'fface back', html: faceHtml(w, 'back') });
             const corner = h('div', { class: 'corner' }, spkBtn(w.han), h('button', { title: '笔顺', onclick: e => { e.stopPropagation(); openStroke(w); } }, '✍'));

@@ -441,3 +441,8 @@ body.student:not(.mirror) .swrap{pointer-events:auto;} body.student:not(.mirror)
 /* free-scroll pages for students, overlay objects on comp pages */
 body.student .cw-scwin.free{overflow-y:auto !important;pointer-events:auto;}
 .slideview.overlay{z-index:4;pointer-events:none;} .slideview.overlay .o{pointer-events:auto;}
+
+/* sentence flash cards: the sentence stays, pinyin + translation appear under it on click */
+.fcard.sent{cursor:pointer;} .fcard.sent .sbody{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:1rem 2rem;box-sizing:border-box;}
+.fcard.sent .shan{font:700 calc(var(--sz,5rem) * var(--fz,1)) KaiTi,'STKaiti',serif;color:var(--rust,#8a3b1f);line-height:1.25;} .fcard.sent .sl{white-space:nowrap;}
+.fcard.sent .sre{margin-top:1rem;visibility:hidden;} .fcard.sent.flip .sre{visibility:visible;} .fcard.sent .sre .py{font-size:calc(2rem * var(--fz,1));color:#1f3a8a;} .fcard.sent .sre .vi{font-size:calc(1.8rem * var(--fz,1));color:#1f3a8a;margin-top:.3rem;}
