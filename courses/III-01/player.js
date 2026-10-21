@@ -117,8 +117,8 @@
             return '<span>Lục thư: ' + type + '</span>' + ((n.trad || part) ? '<span class="bt">' + CW.esc(n.trad) + (n.trad && part ? ' ' : '') + part + '</span>' : '');
         }
         const r = (window.CW_HZINFO || {})[c]; if (!r) return '';
-        const type = { x: 'Hình thanh', i: 'Hội ý', p: 'Tượng hình' }[r.t];
-        if (r.t === 'p' || (!r.t && !r.d)) return (type ? '<span>Lục thư: ' + type + '</span>' : '') + '<span class="bt">Chữ độc thể</span>';
+        const type = { x: 'Hình thanh', i: 'Hội ý', p: 'Tượng hình', z: 'Chỉ sự' }[r.t];
+        if (r.t === 'p' || r.t === 'z' || (!r.t && !r.d)) return (type ? '<span>Lục thư: ' + type + '</span>' : '') + '<span class="bt">Chữ độc thể</span>';
         let parts = r.t === 'x' ? [r.s, r.p] : r.t === 'i' ? Array.from(r.d || '') : [r.r];
         parts = parts.filter(Boolean);
         return (type ? '<span>Lục thư: ' + type + '</span>' : '') + (parts.length ? '<span class="bt">Bộ thủ: ' + CW.esc(parts.join('，')) + '</span>' : '');
@@ -128,8 +128,8 @@
         const chars = Array.from(word.han || '').filter(CW.isCJK);
         if (!chars.length) return;
         let idx = Math.max(0, chars.indexOf(startChar)), writer = null, outline = true, shown = true, evn = 0, lastN = -1;
-        const emit = ev => { if (remote) return; evn++; modalSync = { w: { han: word.han, py: word.py, hv: word.hv, vi: word.vi }, c: chars[idx], ev, n: evn }; post(); };
-        const S = Math.max(240, Math.min(innerHeight * 0.44, innerWidth * 0.8, 480)) | 0;
+        const emit = (ev, extra) => { if (remote) return; evn++; modalSync = Object.assign({ w: { han: word.han, py: word.py, hv: word.hv, vi: word.vi }, c: chars[idx], ev, n: evn }, extra || {}); post(); };
+        const S = 540;                                  // the window is part of the 1920x1080 slide: it scales with it
         const host = h('div', { class: 'swrap', style: { width: S + 'px', height: S + 'px' } });
         const msg = h('div', { class: 'smsg' });
         const tabs = h('div', { class: 'schars' });
@@ -149,12 +149,39 @@
         }
         chars.forEach((c, i) => tabs.append(h('button', { onclick: () => { load(i); emit('load'); } }, c)));
         const total = () => (strokes[chars[idx]] ? strokes[chars[idx]].strokes.length : '');
+        // read-only board that repeats what the teacher does: outline + finished strokes + the live pen trail
+        const NS = 'http://www.w3.org/2000/svg'; let watch = null;
+        const watchStart = () => {
+            const d = strokes[chars[idx]]; if (!d) return;
+            if (writer) { try { writer.cancelQuiz(); } catch (er) { /* ignore */ } }
+            const old = host.querySelector('svg'); if (old) old.style.visibility = 'hidden';
+            const prev = host.querySelector('.watch'); if (prev) prev.remove();
+            const wb = document.createElement('div'); wb.className = 'watch'; wb.style.cssText = 'position:absolute;inset:0;z-index:3;pointer-events:none';
+            const svg = document.createElementNS(NS, 'svg'); svg.setAttribute('viewBox', '-70 -70 1164 1164'); svg.style.cssText = 'width:100%;height:100%;display:block';
+            const mk = (fill, op) => { const g = document.createElementNS(NS, 'g'); g.setAttribute('transform', 'scale(1,-1) translate(0,-900)'); svg.appendChild(g); return g; };
+            const base = mk(); d.strokes.forEach(p => { const e = document.createElementNS(NS, 'path'); e.setAttribute('d', p); e.setAttribute('fill', '#e6d8c8'); base.appendChild(e); });
+            const done = mk(), trail = document.createElementNS(NS, 'polyline');
+            trail.setAttribute('fill', 'none'); trail.setAttribute('stroke', '#432B20'); trail.setAttribute('stroke-width', '34'); trail.setAttribute('stroke-linecap', 'round'); trail.setAttribute('stroke-linejoin', 'round'); svg.appendChild(trail);
+            wb.appendChild(svg); host.appendChild(wb); host.style.pointerEvents = 'none'; watch = { d, done, trail, k: 0 }; setMsg('老师在写 · Cô đang viết…');
+        };
+        const watchTrail = tr => { if (!watch) watchStart(); if (!watch) return; watch.trail.setAttribute('points', (tr || []).map(p => ((p[0] * 1164) - 70).toFixed(0) + ',' + ((p[1] * 1164) - 70).toFixed(0)).join(' ')); };
+        const watchStroke = k => { if (!watch) watchStart(); if (!watch) return; watch.trail.setAttribute('points', ''); while (watch.k < k && watch.k < watch.d.strokes.length) { const e = document.createElementNS(NS, 'path'); e.setAttribute('d', watch.d.strokes[watch.k]); e.setAttribute('fill', '#5F2C16'); watch.done.appendChild(e); watch.k++; } setMsg('✓ 第 ' + k + ' 笔'); };
+        const watchMiss = () => { if (watch) watch.trail.setAttribute('points', ''); setMsg('再试一次 · Thử lại'); };
+        const watchEnd = m => { if (watch) watch.trail.setAttribute('points', ''); setMsg('🎉 完成！共错 ' + (m || 0) + ' 次'); };
         const demo = () => { emit('demo'); writer.cancelQuiz(); setMsg('观看笔顺…'); writer.animateCharacter({ onComplete: () => setMsg(hzInfoText(chars[idx]) || ('共 ' + total() + ' 画')) }); };
         const loop = () => { emit('loop'); writer.cancelQuiz(); setMsg('循环示范（点“重置”停止）'); writer.loopCharacterAnimation(); };
         const practice = () => {
             emit('practice'); host.style.pointerEvents = '';
+            if (!remote && !host._trailOn) {                       // teacher: send the pen trail (normalised 0..1) about every 120 ms
+                host._trailOn = true; let tr = [], last = 0;
+                const nrm = ev => { const r = host.getBoundingClientRect(); return [+((ev.clientX - r.left) / r.width).toFixed(3), +((ev.clientY - r.top) / r.height).toFixed(3)]; };
+                host.addEventListener('pointerdown', ev => { tr = [nrm(ev)]; });
+                host.addEventListener('pointermove', ev => { if (!tr.length || !(ev.buttons & 1)) return; tr.push(nrm(ev)); const n = Date.now(); if (n - last > 120) { last = n; emit('trail', { tr: tr.slice() }); } });
+                const endTr = () => { if (tr.length) { tr = []; } };
+                host.addEventListener('pointerup', endTr); host.addEventListener('pointercancel', endTr);
+            }
             let miss = 0; setMsg('请按笔顺一笔一笔写（写错会有提示）');
-            writer.quiz({ onMistake: () => { miss++; setMsg('再试一次 · Thử lại（' + miss + '）'); }, onCorrectStroke: d => setMsg('✓ 第 ' + (d.strokeNum + 1) + ' 笔'), onComplete: d => { host.style.pointerEvents = 'none'; try { host.dispatchEvent(new MouseEvent('mouseup', { bubbles: true })); host.dispatchEvent(new TouchEvent('touchend', { bubbles: true })); } catch (e) { /* ignore */ } setMsg('🎉 完成！共错 ' + d.totalMistakes + ' 次'); if (idx + 1 < chars.length) setTimeout(() => { load(idx + 1); if (!remote) emit('load'); practice(); }, 900); if (STUDENT && !MIRROR && live.sendResp) live.sendResp(slides[S.i].id, 'w:' + chars[idx], d.totalMistakes, 'write'); } });
+            writer.quiz({ onMistake: () => { miss++; setMsg('再试一次 · Thử lại（' + miss + '）'); emit('miss', { k: miss }); }, onCorrectStroke: d => { setMsg('✓ 第 ' + (d.strokeNum + 1) + ' 笔'); emit('stroke', { k: d.strokeNum + 1 }); }, onComplete: d => { emit('done', { m: d.totalMistakes }); host.style.pointerEvents = 'none'; try { host.dispatchEvent(new MouseEvent('mouseup', { bubbles: true })); host.dispatchEvent(new TouchEvent('touchend', { bubbles: true })); } catch (e) { /* ignore */ } setMsg('🎉 完成！共错 ' + d.totalMistakes + ' 次'); if (idx + 1 < chars.length) setTimeout(() => { load(idx + 1); if (!remote) emit('load'); practice(); }, 900); if (STUDENT && !MIRROR && live.sendResp) live.sendResp(slides[S.i].id, 'w:' + chars[idx], d.totalMistakes, 'write'); } });
         };
         const body = h('div', { class: 'stroke' }, chars.length > 1 ? tabs : null, host, msg,
             h('div', { class: 'sbtns' }, mk('▶ 示范', demo, 'primary'), mk('🔁 循环', loop), mk('✍ 我来写', practice),
@@ -178,7 +205,7 @@
                 const ci = chars.indexOf(m.c);
                 if (m.n === lastN) return; lastN = m.n;
                 if (m.ev === 'load') { if (ci >= 0) load(ci); }
-                else { if (ci >= 0 && ci !== idx) load(ci); if (!writer) return; if (m.ev === 'demo') demo(); else if (m.ev === 'loop') loop(); else if (m.ev === 'practice') { if (!MIRROR) practice(); else demo(); } else if (m.ev === 'shape') { shown = !shown; shown ? writer.showCharacter() : writer.hideCharacter(); } else if (m.ev === 'outline') { outline = !outline; outline ? writer.showOutline() : writer.hideOutline(); } }
+                else { if (ci >= 0 && ci !== idx) load(ci); if (!writer) return; if (m.ev === 'demo') demo(); else if (m.ev === 'loop') loop(); else if (m.ev === 'practice') { if (MIRROR) { watch = null; watchStart(); } else practice(); } else if (MIRROR && m.ev === 'trail') watchTrail(m.tr); else if (MIRROR && m.ev === 'stroke') watchStroke(m.k); else if (MIRROR && m.ev === 'miss') watchMiss(); else if (MIRROR && m.ev === 'done') watchEnd(m.m); else if (m.ev === 'shape') { shown = !shown; shown ? writer.showCharacter() : writer.hideCharacter(); } else if (m.ev === 'outline') { outline = !outline; outline ? writer.showOutline() : writer.hideOutline(); } }
             },
         };
         ensureHzInfo(() => { load(Math.max(0, chars.indexOf(startChar))); emit('load'); });
@@ -188,7 +215,7 @@
         if (!strokeCtl || strokeCtl.han !== m.w.han) { openStroke(m.w, m.c, true); }
         setTimeout(() => { if (strokeCtl) strokeCtl.apply(m); }, 250);
     }
-    CW.openStroke = openStroke;
+    CW.openStroke = openStroke; CW.strokeCtl = () => strokeCtl;
 
     // ------------------------------------------------------------ slides
     const slides = project.slides;
@@ -200,13 +227,15 @@
     let S = { i: Math.min(+(params.get('s') || store.get('pos', 0)) || 0, slides.length - 1) };
     let cur = null;
 
-    function closePop() { $$('.czpop').forEach(p => p.remove()); }
+    let popOff = null;          // the click-away listener of the open pop-up: it must go when the pop-up closes, or it closes the NEXT pop-up at once (second blank could not be filled)
+    function closePop() { $$('.czpop').forEach(p => p.remove()); if (popOff) { popOff(); popOff = null; } }
 
     // ---- free slide
     function freeView(slide, opts) {
         const stage = CW.makeStage(project, slide, Object.assign({ mode: 'player', resolve }, opts || {}));
         stage.style.transform = `scale(${SC})`; stage.style.transformOrigin = '0 0';
         const holder = h('div', { class: 'slideview' + (opts && opts.overlay ? ' overlay' : '') }, stage);
+        setTimeout(() => $$('img[data-once]', stage).forEach(im => CW.playOnce(im)), 0);          // the cover animation starts now (and again whenever this page is shown again)
         const runner = new CW.AnimRunner(stage, slide, W, H);
         let audio = null;
         const interactive = slide.objects.some(o => o.quiz || o.cloze);
@@ -285,14 +314,14 @@
             if (!sp._raw) sp._raw = sp.textContent;
             if (sp.classList.contains('ok') || sp.dataset.locked) return;
             if (STUDENT && CWP.canAnswer && !CWP.canAnswer('c', host.dataset.id + ':' + i)) return;
-            const fill = (txt, cls) => { sp.textContent = txt; sp.classList.remove('ok', 'bad', 'sel'); if (cls) sp.classList.add(cls); if (STUDENT && live.sendResp && txt && txt !== sp._raw) live.sendResp(slide.id, 'c:' + host.dataset.id + ':' + i, txt, 'cloze'); };
-            const key = ans[i];
+            const kid = 'c:' + host.dataset.id + ':' + i;
+            const fill = (txt, cls) => { sp.textContent = txt; sp.classList.remove('ok', 'bad', 'sel'); if (cls) sp.classList.add(cls); if (txt && txt !== sp._raw) sp.dataset.v = txt; else delete sp.dataset.v; if (STUDENT && live.sendResp && txt && txt !== sp._raw) live.sendResp(slide.id, kid, txt, 'cloze'); };
+            const setAns = v => { if (STUDENT) return; (CZ.ans[slide.id] = CZ.ans[slide.id] || {})[kid] = v; saveCz(); };     // the teacher's pick = the right answer
             if (!bank.length) {
-                if (ev0 && ev0.shiftKey && key) { fill(key, 'sel'); return; }
                 if (sp.querySelector('input')) return;
                 const inp = h('input', { class: 'czin', type: 'text', style: { width: Math.max(4, sp._raw.length) + 'ch' } });
                 sp.textContent = ''; sp.append(inp); inp.focus();
-                const done = () => { const v = inp.value.trim(); if (!v) { fill(sp._raw, ''); return; } if (!key) { fill(v, 'sel'); return; } if (v.toLowerCase() === String(key).toLowerCase()) fill(v, 'ok'); else { fill(v, 'bad'); setTimeout(() => { if (sp.classList.contains('bad')) fill(sp._raw, ''); }, 1200); } };
+                const done = () => { const v = inp.value.trim(); if (!v) { fill(sp._raw, ''); return; } setAns({ t: v }); fill(v, 'sel'); };
                 inp.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') done(); if (e.key === 'Escape') fill(sp._raw, ''); });
                 inp.addEventListener('blur', done); inp.addEventListener('click', e => e.stopPropagation());
                 return;
@@ -302,9 +331,7 @@
             const pop = h('div', { class: 'czpop' }, bank.map(b => h('button', {
                 onclick: ev => {
                     ev.stopPropagation(); closePop();
-                    if (!key) { fill(b.t, 'sel'); return; }
-                    if (String(b.k).toLowerCase() === String(key).toLowerCase() || b.t === key) fill(b.t, 'ok');
-                    else { fill(b.t, 'bad'); setTimeout(() => { if (sp.classList.contains('bad')) fill(sp._raw, ''); }, 900); }
+                    setAns({ k: b.k, t: b.t }); fill(b.t, 'sel');
                 },
             }, h('b', null, b.k), ' ' + b.t)));
             document.body.append(pop);
@@ -312,8 +339,12 @@
             pop.style.left = Math.max(8, Math.min(innerWidth - pw - 8, r.left + r.width / 2 - pw / 2)) + 'px';
             const below = r.bottom + 8 + pop.offsetHeight < innerHeight;
             pop.style.top = (below ? r.bottom + 8 : r.top - pop.offsetHeight - 8) + 'px';
-            setTimeout(() => document.addEventListener('click', closePop, { once: true }), 0);
+            setTimeout(() => { if (!pop.isConnected) return; document.addEventListener('click', closePop, { once: true }); popOff = () => document.removeEventListener('click', closePop); }, 0);
         }
+        if (PRES) setTimeout(() => {
+            const sa = czAnswers(slide);
+            $$('.cz', stage).forEach(sp => { const host = sp.closest('.o'), a = sa['c:' + host.dataset.id + ':' + sp.dataset.i]; if (a && a.t) { if (!sp._raw) sp._raw = sp.textContent; sp.textContent = a.t; sp.classList.add('sel'); } });
+        }, 0);
         if (ROLE === 'teacher' && stage._scwin) { let st = 0; stage._scwin.addEventListener('scroll', () => { clearTimeout(st); st = setTimeout(post, 120); }); }
         return {
             el: holder, runner,
@@ -330,7 +361,7 @@
             scrollBy(dir) { const w = stage._scwin; if (!w || w.scrollHeight <= w.clientHeight + 2) return false; w.scrollBy({ top: dir * 160, behavior: 'smooth' }); return true; },
             quizReveal(data) { if (data === undefined && CWP.quizData) { data = CWP.quizData(slide); CWP.rvd = data; } revealNow(data); }, hasQuiz: slide.objects.some(o => o.quiz), slide,
             reset() { const had = stage.dataset.revealed; delete stage.dataset.revealed; CWP.rvd = null; $$('.qframe', stage).forEach(x => x.remove()); $$('.cz', stage).forEach(x => { if (x._raw) x.textContent = x._raw; x.classList.remove('ok', 'bad', 'sel'); }); if (had && ROLE === 'teacher') post(); },
-            destroy() { closePop(); $$('audio,video', holder).forEach(m => m.pause()); hideBar(); videoSync = null; },
+            destroy() { closePop(); if (CZ.rv && CZ.rv.slide === slide.id) CZ.rv = null; $$('audio,video', holder).forEach(m => m.pause()); hideBar(); videoSync = null; },
             next() { return runner.next(); }, prev() { return runner.prev(); },
             finish() { runner.finish(); },
             state: () => { const w = stage._scwin; return { k: runner.k, total: runner.total, rv: !!stage.dataset.revealed, sc: w && w.scrollHeight > w.clientHeight ? +(w.scrollTop / (w.scrollHeight - w.clientHeight)).toFixed(4) : null }; },
@@ -391,7 +422,7 @@
             const want = vd.p ? vd.t + Math.max(0, Math.min(5, (Date.now() - vd.ts) / 1000)) * (vd.r || 1) : vd.t;
             if (Math.abs(v.currentTime - want) > 1.2) { try { v.currentTime = want; } catch (e) { /* ignore */ } }
             v.playbackRate = vd.r || 1;
-            if (vd.p && v.paused) v.play().catch(() => { });
+            if (vd.p && v.paused) v.play().catch(() => { v.muted = true; v.play().catch(() => { }); });
             else if (!vd.p && !v.paused) v.pause();
         };
         if (v.readyState < 1) { v.addEventListener('loadedmetadata', go, { once: true }); v.load(); } else go();
@@ -416,7 +447,13 @@
         const cfg = Object.assign({ shuffle: false, front: 'han', auto: false, showHv: true, size: 1 }, store.get('flashCfg', {}));
         if (STUDENT) { cfg.shuffle = false; cfg.front = 'han'; cfg.size = 1; }
         let order = [], pos = 0, flipped = false;
-        const root = h('div', { class: 'panel flash' });
+        const root = h('div', { class: 'panel flash' + (slide.flash && slide.flash.sent ? ' sent' : '') });
+        const fcfg = (slide.flash && slide.flash.frame) || null;
+        if (fcfg && fcfg.color) root.style.background = fcfg.color;
+        if (fcfg && fcfg.radius != null) root.style.borderRadius = (fcfg.radius * 0.6) + 'rem';
+        const SENT = !!(slide.flash && slide.flash.sent);
+        const lineOf = t => String(t).split(/[|｜\s]+/).filter(Boolean);
+        const maxLine = Math.max(6, ...words.map(w => Math.max(0, ...lineOf(w.han).map(l => Array.from(l).length))));
         function rebuild() {
             order = words.map((_, i) => i);
             if (cfg.shuffle) for (let a = order.length - 1; a > 0; a--) { const b = Math.floor(Math.random() * (a + 1)); [order[a], order[b]] = [order[b], order[a]]; }
@@ -462,6 +499,15 @@
                 h('button', { class: 'btn sm' + (showSet ? ' on' : ''), onclick: () => { showSet = !showSet; draw(); } }, '⚙ 设置'),
                 h('button', { class: 'btn sm', title: '字小一点', onclick: () => sizeTo(-.1) }, 'A−'), h('button', { class: 'btn sm', title: '字大一点', onclick: () => sizeTo(.1) }, 'A+'),
                 h('span', { class: 'fcount' }, (pos + 1) + ' / ' + order.length));
+            if (SENT) {
+                const sz = Math.min(5.6, 46 / maxLine) * (slide.flash.fz || 1);
+                const lines = lineOf(w.han).map(l => '<div class="sl">' + esc(l) + '</div>').join('');
+                const sc = h('div', { class: 'fcard sent' + (flipped ? ' flip' : ''), onclick: flip }, h('div', { class: 'sbody', style: { '--sz': sz + 'rem' } }, h('div', { class: 'shan', html: lines }), h('div', { class: 'sre', html: '<div class="py">' + esc(w.py || '') + '</div><div class="vi">' + esc(w.vi || '') + '</div>' })));
+                root.style.setProperty('--fz', cfg.size);
+                const scorner = h('div', { class: 'corner' }, spkBtn(String(w.han).replace(/[|｜]/g, '')));
+                root.append(tools, h('div', { class: 'fstage' }, h('button', { class: 'fnav', onclick: prevCard, title: '上一张 ←' }, '‹'), h('div', { class: 'fwrap' }, sc, scorner), h('button', { class: 'fnav', onclick: nextCard, title: '下一张 →' }, '›')));
+                return;
+            }
             const front = h('div', { class: 'fface front', html: faceHtml(w, 'front') });
             const back = h('div', { class: 'fface back', html: faceHtml(w, 'back') });
             const corner = h('div', { class: 'corner' }, spkBtn(w.han), h('button', { title: '笔顺', onclick: e => { e.stopPropagation(); openStroke(w); } }, '✍'));
@@ -498,7 +544,7 @@
     function dialogView(slide) {
         const d = slide.dialog || { lines: [] };
         const prose = d.lines.length > 0 && d.lines.every(l => !(l.speaker || l.name));
-        let py = store.get('textPy', false), fsz = store.get('textSz', 2.3), hl = store.get('textHl', false);
+        let py = d.py != null ? !!d.py : store.get('textPy', false), fsz = d.fz ? +(2.3 * d.fz).toFixed(2) : store.get('textSz', 2.3), hl = store.get('textHl', false);
         let ind = store.get('textInd', true), plh = store.get('textLh', 1.9);
         const vocab = Array.from(new Set(slides.filter(s => s.vocab && s.vocab.han).flatMap(s => String(s.vocab.han).split(/[\/／、]/)))).filter(Boolean).sort((a, b) => b.length - a.length);
         const dlg = h('div', { class: 'dlg' + (py ? '' : ' nopy') + (hl ? ' hl' : '') });
@@ -525,6 +571,7 @@
             dlg.innerHTML = ''; d.lines.forEach((l, i) => dlg.append(lineEl(l, i)));
             dlg.classList.toggle('nopy', !py); dlg.classList.toggle('hl', hl);
             dlg.style.setProperty('--ind', ind ? '2em' : '0'); dlg.style.setProperty('--plh', plh);
+            dlg.style.setProperty('--avs', d.avs || 1.3); dlg.style.setProperty('--lgap', ((d.gap != null ? d.gap : 1.6) * .625) + 'rem');
         }
         draw();
         const sv = (k, v) => { if (!STUDENT) store.set(k, v); };
@@ -536,7 +583,7 @@
             prose ? h('button', { class: 'btn sm', title: '行距小一点', onclick: () => { plh = Math.max(1.2, +(plh - .15).toFixed(2)); sv('textLh', plh); draw(); post(); } }, '≡−') : null,
             prose ? h('button', { class: 'btn sm', title: '行距大一点', onclick: () => { plh = Math.min(3.2, +(plh + .15).toFixed(2)); sv('textLh', plh); draw(); post(); } }, '≡+') : null,
             h('button', { class: 'btn sm', title: '字小一点', onclick: () => { fsz = Math.max(1.4, fsz - .2); sv('textSz', fsz); draw(); post(); } }, 'A−'),
-            h('button', { class: 'btn sm', title: '字大一点', onclick: () => { fsz = Math.min(4, fsz + .2); sv('textSz', fsz); draw(); post(); } }, 'A+'));
+            h('button', { class: 'btn sm', title: '字大一点', onclick: () => { fsz = Math.min(6, fsz + .2); sv('textSz', fsz); draw(); post(); } }, 'A+'));
         let scT = 0;
         if (ROLE === 'teacher') dlg.addEventListener('scroll', () => { clearTimeout(scT); scT = setTimeout(post, 120); });
         const dstate = () => ({ py, hl, fsz, ind, plh, sc: dlg.scrollHeight > dlg.clientHeight ? +(dlg.scrollTop / (dlg.scrollHeight - dlg.clientHeight)).toFixed(4) : 0 });
@@ -650,7 +697,77 @@
         openModal(h('div', { class: 'helpbox' }, h('h3', null, '操作说明'), h('table', null, rows.map(r => h('tr', null, h('td', null, r[0]), h('td', null, r[1]))))));
     }
 
-    const fullState = () => Object.assign({}, (cur && cur.state && cur.state()) || {}, { m: modalSync, au: audioSync, vd: videoSync, rvd: CWP.rvd, tn: CWP.turn || null, fl: CWP.fills || null, cl: CWP.cls || null });
+    // ---- the assistant's html pages (flash / dialogue / quiz) inside the slide: teacher's clicks, changes and pen strokes are replayed on the other screens
+    const HV = { id: '', ev: [] }, HQ = { id: '', data: null };
+    // fill-in-the-blank pages: the teacher's choices are the right answers (kept per lesson); students are judged against them when the answers are published
+    const CZ = { ans: {}, rv: null };
+    const CZKEY = 'cwcz:' + (project.meta && (project.meta.source || project.meta.title) || 'x');
+    try { CZ.ans = JSON.parse(localStorage.getItem(CZKEY) || '{}') || {}; } catch (e) { CZ.ans = {}; }
+    function saveCz() { try { localStorage.setItem(CZKEY, JSON.stringify(CZ.ans)); } catch (e) { /* ignore */ } }
+    function czAnswers(sl) {
+        const out = Object.assign({}, CZ.ans[sl.id] || {});
+        CW.walkObjs(sl.objects || [], o => { if (!o.cloze) return; const bank = o.cloze.bank || []; (o.cloze.ans || []).forEach((a, i) => { const kid = 'c:' + o.id + ':' + i; if (a && !out[kid]) { const b = bank.find(x => String(x.k).toLowerCase() === String(a).toLowerCase() || x.t === a); out[kid] = b ? { k: b.k, t: b.t } : { t: String(a) }; } }); });
+        return out;
+    }
+    function applyCz(rv) {
+        if (!rv || !slides[S.i] || rv.slide !== slides[S.i].id) return;
+        $$('.cz').forEach(sp => {
+            const host = sp.closest('.o'), a = rv.ans['c:' + host.dataset.id + ':' + sp.dataset.i]; if (!a || !a.t) return;
+            if (!sp._raw) sp._raw = sp.textContent;
+            const mine = sp.dataset.v, plain = STUDENT && !MIRROR;
+            if (plain && mine && mine !== a.t) { sp.textContent = mine; sp.classList.remove('sel', 'ok'); sp.classList.add('bad'); sp.title = '正确答案：' + a.t; }
+            else { sp.textContent = a.t; sp.classList.remove('sel', 'bad'); sp.classList.add('ok'); }
+            sp.dataset.locked = '1';
+        });
+    }
+    CWP.applyCz = applyCz; CWP.czAnswersOf = czAnswers;
+    CWP.czPublish = () => { const sl = slides[S.i]; if (!sl || ROLE !== 'teacher') return; CZ.rv = { slide: sl.id, ans: czAnswers(sl) }; applyCz(CZ.rv); post(); };
+    CWP.czPublished = () => !!(CZ.rv && slides[S.i] && CZ.rv.slide === slides[S.i].id);
+    let pendingHv = null, pendingHq = null;
+    function htmlFrame() { return $('.o-html iframe', document); }
+    function applyHtml(hv, hq) {
+        if (hq !== undefined) pendingHq = hq;
+        if (ROLE !== 'teacher' && pendingHq && slides[S.i] && pendingHq.id === slides[S.i].id) { const f2 = htmlFrame(); if (f2 && f2._ready && !f2._revealed) { f2._revealed = true; f2.contentWindow.postMessage({ cwb: 1, k: 'reveal', data: pendingHq.data }, '*'); } }
+        pendingHv = hv || pendingHv; hv = pendingHv; if (ROLE === 'teacher' || !hv || !slides[S.i] || hv.id !== slides[S.i].id) return;
+        const fr = htmlFrame(); if (!fr || !fr._ready) return;
+        const from = fr._applied || 0;
+        if (hv.ev.length < from) { fr._applied = 0; fr._ready = false; fr.srcdoc = fr.srcdoc; return; }          // the teacher restarted the page
+        const fresh = hv.ev.slice(from); if (fresh.length) fr.contentWindow.postMessage({ cwb: 1, k: 'apply', ev: fresh }, '*');
+        fr._applied = hv.ev.length;
+    }
+    window.addEventListener('message', e => {
+        const m = e.data; if (!m || !m.cwb) return;
+        const fr = $$('.o-html iframe', document).find(f => f.contentWindow === e.source); if (!fr) return;
+        if (m.k === 'ready') {
+            fr._ready = true; fr._applied = 0;
+            e.source.postMessage({ cwb: 1, k: 'role', role: MIRROR ? 'mirror' : STUDENT ? 'student' : ROLE === 'teacher' ? 'teacher' : 'view' }, '*');
+            if (ROLE === 'teacher') { HV.id = slides[S.i].id; HV.ev = []; HQ.id = ''; HQ.data = null; post(); } else applyHtml();
+            CWP.emit('htmlready');
+            return;
+        }
+        if (m.k === 'quiz') { fr._quiz = m.qs; return; }
+        if (m.k === 'ans' && STUDENT && !MIRROR) {
+            const key = String(m.q + 1);
+            if (CWP.canAnswer && !CWP.canAnswer('q', key)) { e.source.postMessage({ cwb: 1, k: 'deny', q: m.q }, '*'); return; }
+            if (live.sendResp) live.sendResp(slides[S.i].id, 'q:' + key, String.fromCharCode(65 + m.o), 'quiz');
+            return;
+        }
+        if (ROLE !== 'teacher') return;
+        if (m.k === 'rev') { CWP.htmlQuizReveal(); return; }
+        if (m.k === 'ev' && HV.ev.length < 2500) { HV.ev.push(m.e); post(); }
+        else if (m.k === 'nav' && m.a === 'next') CWP.emit('advance');
+    });
+    // teacher: show the quiz answers on every screen, with each student's avatar under the option they chose and the share of right answers
+    CWP.htmlQuizReveal = () => {
+        const fr = htmlFrame(); if (!fr || !fr._quiz || HQ.data) return;
+        const sl = slides[S.i]; HQ.id = sl.id;
+        HQ.data = CWP.htmlQuizData ? CWP.htmlQuizData(sl, fr._quiz) : {};
+        fr.contentWindow.postMessage({ cwb: 1, k: 'reveal', data: HQ.data }, '*'); post();
+    };
+    CWP.htmlQuizInfo = () => { const fr = htmlFrame(); return fr && fr._quiz ? fr._quiz : null; };
+    CWP.htmlQuizDone = () => !!HQ.data;
+    CWP.htmlSend = msg => { const fr = htmlFrame(); if (fr && fr._ready) fr.contentWindow.postMessage(Object.assign({ cwb: 1 }, msg), '*'); };
+    const fullState = () => Object.assign({}, (cur && cur.state && cur.state()) || {}, { cz: CZ.rv, hq: HQ.data ? { id: HQ.id, data: HQ.data } : null, hv: HV.id ? { id: HV.id, ev: HV.ev } : null, m: modalSync, au: audioSync, vd: videoSync, rvd: CWP.rvd, tn: CWP.turn || null, fl: CWP.fills || null, cl: CWP.cls || null });
 
     // ------------------------------------------------------------ live class (课堂): teacher writes the state, students follow
     const live = { ref: null, timer: null, db: null, user: null, session: null, members: {}, resp: {}, sendResp: null };
@@ -663,7 +780,7 @@
     function liveApply(state) {
         if (!state || !STUDENT) return;
         if (state.i !== S.i) goTo(state.i);
-        setTimeout(() => { const st = state.st || {}; if (cur && cur.sync) cur.sync(st); applyModal(st.m); applyAudio(st.au); applyVideo(st.vd); CWP.emit('applied', st); }, 80);
+        setTimeout(() => { const st = state.st || {}; if (cur && cur.sync) cur.sync(st); applyModal(st.m); applyAudio(st.au); applyVideo(st.vd); applyHtml(st.hv, st.hq || null); applyCz(st.cz); CWP.emit('applied', st); }, 80);
     }
     async function liveInit() {
         if (MIRROR && lc) { lc.onmessage = e => { const m = e.data || {}; if (m.t === 'state') liveApply(m.state); else CWP.emit('msg', m); }; try { lc.postMessage({ t: 'hello' }); } catch (e) { /* ignore */ } return; }
@@ -732,7 +849,7 @@
           <aside id="outline"></aside>
           <main id="view"></main>
           <nav id="dock"><button class="nav" id="prev" title="上一步 ←">◀</button><div id="progress"><i></i></div><div id="pos"></div><button class="nav" id="next" title="下一步 →">▶</button></nav>
-          </div></div><div id="modal-root"></div>`;
+          <div id="modal-root"></div></div></div>`;
         if (embed) document.body.classList.add('embed');
         applyScale(); addEventListener('resize', applyScale); document.addEventListener('fullscreenchange', applyScale);
         buildOutline();

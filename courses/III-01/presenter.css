@@ -2,7 +2,7 @@
 #zl{position:absolute;inset:0;transition:transform .35s ease;}
 #board{position:absolute;inset:0;z-index:5;display:none;} #board.on{display:block;} #board.black{background:#1d2a22;} #board.white{background:#fffdf8;}
 #ink{position:absolute;left:0;top:0;width:1920px;height:1080px;z-index:6;pointer-events:none;touch-action:none;}
-#laser{position:absolute;z-index:7;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;background:radial-gradient(circle,#fff 0 18%,#ff2a2a 22% 55%,rgba(255,42,42,0) 72%);box-shadow:0 0 22px 8px rgba(255,40,40,.55);display:none;pointer-events:none;}
+#laser{position:absolute;z-index:7;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;background:radial-gradient(circle,#ff2a2a 0 55%,rgba(255,42,42,0) 72%);box-shadow:0 0 22px 8px rgba(255,40,40,.55);display:none;pointer-events:none;}
 body.mirror .qz,body.mirror .cz{pointer-events:none !important;}
 
 /* student: question from the teacher */
@@ -73,3 +73,13 @@ body.editing .o-box > .tx{outline:2px dashed #BD582C;outline-offset:-2px;cursor:
 .clmark{position:absolute;z-index:9;display:flex;gap:2px;pointer-events:none;} .clmark img{width:46px;height:46px;object-fit:contain;border-radius:50%;} body.presenter .clmark img{pointer-events:auto;cursor:pointer;} .clmark img.on{background:#FFE9C7;box-shadow:0 0 0 3px #BD582C;}
 
 .ordtag.row{display:flex;gap:34px;align-items:flex-end;} .ordtag.row > div{text-align:center;} .ordtag.row .nxt img{animation:nxt 1s infinite;opacity:.9;}
+
+/* 字源 cards in the notes of a vocabulary page: head line (character, type, parts), then 本义 and 演变 across the full width */
+.zyc{background:rgba(255,255,255,.07);border-radius:14px;padding:10px 14px;margin:8px 0;line-height:1.75;}
+.zyh{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:2px;}
+.zych{font:700 26px/1.2 'Microsoft YaHei',sans-serif;color:#e8cf94;} .zyt{font-size:16px;color:#f1ede6;} .zyp{font-size:16px;color:#f1ede6;}
+.zyl{font-size:15px;color:#ece7df;} .zyl b{color:#fff;font-weight:600;}
+.zyo{margin-top:8px;color:#ece7df;line-height:1.7;}
+
+/* students' answers per blank (teacher console) */
+.czrow{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin:4px 0;font-size:15px;} .czg{display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,.08);border-radius:999px;padding:1px 8px 1px 10px;} .czg img{width:22px;height:22px;object-fit:contain;} .czg.ok{background:rgba(80,170,110,.35);} .czg.no{background:rgba(200,80,70,.3);} .czr{color:#9fd6ad;}

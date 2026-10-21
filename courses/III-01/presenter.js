@@ -234,6 +234,16 @@
     const respFor = (slide, key) => allResp().filter(r => r.slide === slide && r.key === key);
     const nameOf = email => { const r = rosterOf().find(x => x.email === email); return r ? r.name : email; };
     const qsOf = slide => { const out = {}; CW.walkObjs(slide.objects || [], o => { if (o.quiz && o.quiz.q) (out[o.quiz.q] = out[o.quiz.q] || []).push(o); }); return out; };
+    P.htmlQuizData = (slide, info) => {
+        const out = {};
+        (info || []).forEach((q, qi) => {
+            const key = String(qi + 1), right = q.ans >= 0 ? String.fromCharCode(65 + q.ans) : '';
+            const rows = respFor(slide.id, 'q:' + key), opts = {}; let ok = 0;
+            rows.forEach(r => { (opts[r.val] = opts[r.val] || []).push(P.avatarUrl(avOf(r.email))); if (r.val === right) ok++; });
+            out[key] = { opts, right, ok, n: rows.length };
+        });
+        return out;
+    };
     P.quizData = slide => {
         const out = {}, qs = qsOf(slide);
         Object.keys(qs).forEach(q => {
@@ -246,12 +256,12 @@
     };
 
     // ------------------------------------------------------------------ answer order (回答顺序): endless loop, not reset by changing page
-    let ord = { list: [], i: 0, on: true, made: false, used: false }; let ordOpen = null;
+    let ord = { list: [], i: 0, on: true, made: false, used: false }; let ordOpen = null, ordPos = null;
     const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
     function publishOrd() {
         const on = new Set(onlineEmails()); let nx = -1;
         for (let k = 1; k <= ord.list.length; k++) { const j = (ord.i + k) % ord.list.length; if (on.has(ord.list[j].e) && j !== ord.i) { nx = j; break; } }
-        sendUi({ ord: { list: ord.list.map(x => ({ e: x.e, name: x.name, av: x.av, on: on.has(x.e) })), i: ord.i, nx, show: ord.on } });
+        sendUi({ ord: { list: ord.list.map(x => ({ e: x.e, name: x.name, av: x.av, on: on.has(x.e) })), i: ord.i, nx, show: ord.on, pos: ordPos, open: !!ordOpen } });
     }
     function buildOrd(reshuffle) {
         const ro = rosterOf(), on = onlineEmails();
@@ -287,26 +297,51 @@
         const o = ordView; let tab = $('#ordtab'), panel = $('#ordpanel');
         if (!o || !o.list || !o.list.length || o.show === false) { if (tab) tab.remove(); if (panel) panel.remove(); renderMe(); return; }
         if (ordOpen === null) { try { ordOpen = localStorage.getItem('cw_ord_open') === '1'; } catch (e) { ordOpen = false; } }
-        const open = ordOpen;
-        const flip = v => { ordOpen = v; try { localStorage.setItem('cw_ord_open', v ? '1' : '0'); } catch (e) { /* ignore */ } renderOrd(); };
-        if (!tab) { tab = h('button', { id: 'ordtab', title: '回答顺序' }, '👥'); $('#app').append(tab); }
-        tab.onclick = () => flip(!ordOpen);
+        const follow = MIRROR && o.open !== undefined;                        // only the shared (Meet) window copies what the teacher does with it
+        const pinned = false;                                                  // real students keep their own window: they may hide or drag it; only the shared (Meet) window follows the teacher
+        const open = pinned ? true : follow ? !!o.open : ordOpen;
+        const flip = v => { if (follow || pinned) return; ordOpen = v; try { localStorage.setItem('cw_ord_open', v ? '1' : '0'); } catch (e) { /* ignore */ } renderOrd(); if (PRES) publishOrd(); };
+        if (pinned) { if (tab) tab.remove(); tab = null; }
+        else if (!tab) { tab = h('button', { id: 'ordtab', title: '回答顺序' }, '👥'); $('#app').append(tab); }
+        if (tab) tab.onclick = () => flip(!ordOpen);
         if (panel) panel.remove();
         renderMe();
         if (!open) return;
-        const pos = (() => { try { return JSON.parse(localStorage.getItem('cw_ord_pos') || 'null'); } catch (e) { return null; } })() || { x: 1700, y: 160 };
+        const pos = pinned ? { x: 1700, y: 160 } : (follow && o.pos ? { x: o.pos.x, y: o.pos.y } : null) || (() => { try { return JSON.parse(localStorage.getItem('cw_ord_pos') || 'null'); } catch (e) { return null; } })() || { x: 1700, y: 160 };
+        if (PRES) ordPos = { x: pos.x, y: pos.y };
         panel = h('div', { id: 'ordpanel', style: { left: pos.x + 'px', top: pos.y + 'px' } });
-        const head = h('div', { class: 'ohead' }, '回答顺序', h('button', { onclick: () => flip(false) }, '✕'));
+        const head = h('div', { class: 'ohead' }, '回答顺序', pinned ? null : h('button', { onclick: () => flip(false) }, '✕'));
         panel.append(head);
         o.list.forEach((x, k) => panel.append(h('div', { class: 'oi2' + (k === o.i ? ' cur' : '') + (k === o.nx ? ' nxt' : '') + (x.on ? '' : ' off') }, h('img', { src: P.avatarUrl(x.av), alt: '' }), h('span', null, x.name))));
         $('#app').append(panel);
         head.addEventListener('pointerdown', e => {
-            if (e.target.tagName === 'BUTTON') return;
+            if (e.target.tagName === 'BUTTON' || follow || pinned) return;
             const ar = $('#app').getBoundingClientRect(), sc = ar.width / W; const sx = e.clientX, sy = e.clientY, ox = pos.x, oy = pos.y;
             const mv = ev => { pos.x = Math.max(0, Math.min(W - 160, ox + (ev.clientX - sx) / sc)); pos.y = Math.max(0, Math.min(H - 200, oy + (ev.clientY - sy) / sc)); panel.style.left = pos.x + 'px'; panel.style.top = pos.y + 'px'; };
-            const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); try { localStorage.setItem('cw_ord_pos', JSON.stringify(pos)); } catch (er) { /* ignore */ } };
+            const up = () => { document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); try { localStorage.setItem('cw_ord_pos', JSON.stringify(pos)); } catch (er) { /* ignore */ } if (PRES) { ordPos = { x: pos.x, y: pos.y }; publishOrd(); } };
             document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up); e.preventDefault();
         });
+    }
+    // the notes of a vocabulary page: the 字源 blocks (type / parts / 本义 / 演变) as cards, anything else (the questions) as plain lines
+    function notesHtml(sl) {
+        const lines = String(sl.notes || '').split('\n').map(x => x.replace(/\s+$/, ''));
+        const TYPE = /^(象形|指事|会意|形声|转注|假借)(.*)$/;
+        const hanChars = Array.from(new Set(Array.from((sl.vocab && sl.vocab.han) || '').filter(c => /[\u3400-\u9fff]/.test(c))));
+        const cards = []; const rest = []; let k = 0, cardNo = 0;
+        while (k < lines.length) {
+            let ch = '', head = null;
+            if (/^[\u3400-\u9fff]$/.test(lines[k].trim()) && TYPE.test((lines[k + 1] || '').trim())) { ch = lines[k].trim(); k++; }
+            const m = TYPE.exec((lines[k] || '').trim());
+            if (!m) { rest.push(lines[k]); k++; continue; }
+            if (!ch) ch = hanChars[cardNo] || '';
+            const card = { ch, type: m[1], parts: m[2].trim(), ben: '', yan: '' }; k++;
+            while (k < lines.length && /^(本义|演变)[：:]/.test(lines[k].trim())) { const mm = /^(本义|演变)[：:]\s*(.*)$/.exec(lines[k].trim()); if (mm[1] === '本义') card.ben = mm[2]; else card.yan = mm[2]; k++; }
+            cards.push(card); cardNo++;
+        }
+        const html = cards.map(c => '<div class="zyc"><div class="zyh"><span class="zych">' + esc(c.ch) + '</span><span class="zyt">' + esc(c.type) + '</span>' + (c.parts ? '<span class="zyp">' + esc(c.parts) + '</span>' : '') + '</div>' +
+            (c.ben ? '<div class="zyl"><b>本义：</b>' + esc(c.ben) + '</div>' : '') + (c.yan ? '<div class="zyl"><b>演变：</b>' + esc(c.yan) + '</div>' : '') + '</div>').join('');
+        const other = rest.join('\n').trim();
+        return html + (other ? '<div class="zyo">' + esc(other).replace(/\n/g, '<br>') + '</div>' : '');
     }
     function renderMe() {
         let me = $('#ordme'); const o = ordView;
@@ -321,6 +356,7 @@
         const vis = ps.filter(p => getComputedStyle(p).visibility !== 'hidden');
         return vis[vis.length - 1] || null;
     }
+    const ROWMARK = !(project.meta && project.meta.ordSide);
     function placeMark(el, who, below) {
         const zl = $('#zl'); if (!zl || !el) return;
         const zr = zl.getBoundingClientRect(), ratio = zr.width / W, r = el.getBoundingClientRect();
@@ -329,7 +365,9 @@
         else { m.style.left = Math.max(4, (r.left - zr.left) / ratio - 96) + 'px'; m.style.top = ((r.top - zr.top) / ratio - 4) + 'px'; }
         zl.append(m);
     }
+    P.on('htmlready', () => renderMarks());
     function renderMarks() {
+        if (P.htmlSend && !/^html:s?flash/.test(((slides[P.S] || {}).tag) || '')) P.htmlSend({ k: 'ord', list: null });
         $$('.ordmark').forEach(e => e.remove()); $$('.ordtag').forEach(e => e.remove()); $$('.clmark').forEach(e => e.remove());
         const o = ordView || { list: [], i: 0 }; if (o.show === false) return;
         const cu = o.list[o.i];
@@ -340,15 +378,18 @@
             if (/^c:/.test(k0)) { const [, oid, idx] = k0.split(':'); const sp = $('.o[data-id="' + oid + '"] .cz[data-i="' + idx + '"]'); el = sp ? (sp.closest('p') || sp) : null; }
             else if (/^q:/.test(k0)) el = $('.qz[data-q="' + k0.slice(2) + '"]');
             placeMark(el, { name: tn.name, av: tn.av });
+        } else if (/^html:s?flash/.test(sl.tag || '')) {
+            const nx = o.list[o.nx];
+            if (P.htmlSend) P.htmlSend({ k: 'ord', list: [{ name: cu.name, img: P.avatarUrl(cu.av) }], nx: nx && nx !== cu ? { name: nx.name, img: P.avatarUrl(nx.av) } : null });
         } else if (sl.type === 'flash') {
             const wrap = $('#view .fwrap'); const nx = o.list[o.nx];
             if (wrap) wrap.append(h('div', { class: 'ordtag row' }, h('div', null, h('img', { src: P.avatarUrl(cu.av), alt: '' }), h('span', null, cu.name)), nx && nx !== cu ? h('div', { class: 'nxt' }, h('img', { src: P.avatarUrl(nx.av), alt: '' }), h('span', null, nx.name)) : null));
-        } else if ((sl.anim || []).some(a => a.para)) { const ep = exampleP(); placeMark(ep, cu); const nx = o.list[o.nx]; if (nx && nx !== cu) placeMark(ep, nx, true); }
+        } else if (ROWMARK && (sl.anim || []).some(a => a.para)) { const ep = exampleP(); placeMark(ep, cu); const nx = o.list[o.nx]; if (nx && nx !== cu) placeMark(ep, nx, true); }   // level 3: a person on every example row
     }
     P.on('advance', () => {
         if (!PRES) return;
         const sl = slides[P.S], tag = sl.tag || '';
-        if (sl.type === 'flash' || (/vocab|grammar/.test(tag) && (sl.anim || []).some(a => a.para))) { if (ord.used) advanceOrd(false); ord.used = true; }
+        if (sl.type === 'flash' || /^html:s?flash/.test(tag) || (ROWMARK && /vocab|grammar/.test(tag) && (sl.anim || []).some(a => a.para))) { if (ord.used) advanceOrd(false); ord.used = true; }          // levels 1/2 (meta.ordSide): only flash cards change the person by themselves
         renderMarks();
     });
 
@@ -431,7 +472,20 @@
         lastQA = ''; sendUi({ q: activeQ, qa: [] }); simRespondQ(); renderSide();
     }
     let autoOn = true;
+    function checkCz() {
+        if (!PRES || !autoOn || P.czPublished()) return;
+        const sl = slides[P.S], stage = $('#view .cw-stage'); if (!stage || (pageMode[sl.id] || 'class') === 'order') return;
+        const keys = $$('.cz', stage).map(sp => 'c:' + sp.closest('.o').dataset.id + ':' + sp.dataset.i); if (!keys.length) return;
+        const on = onlineEmails(); if (!on.length) return;
+        if (on.every(em => keys.every(k => respFor(sl.id, k).some(r => r.email === em)))) P.czPublish();
+    }
     function checkAuto() {
+        safe(checkCz, 'cz');
+        if (PRES && autoOn && /^html:quiz/.test((slides[P.S] || {}).tag || '') && P.htmlQuizInfo && P.htmlQuizInfo() && !P.htmlQuizDone()) {
+            const sl = slides[P.S], info = P.htmlQuizInfo(), on = onlineEmails();
+            if (info.length && on.length && on.every(em => info.every((q, qi) => respFor(sl.id, 'q:' + (qi + 1)).some(r => r.email === em)))) P.htmlQuizReveal();
+            return;
+        }
         if (!PRES || !autoOn || !P.cur || !P.cur.hasQuiz) return;
         const st = P.cur.state(); if (st && st.rv) return;
         const sl = slides[P.S]; if ((pageMode[sl.id] || 'class') === 'order') return;
@@ -448,6 +502,30 @@
         });
     }
     function simRespondQuiz() {
+        if (simOn && $('#view .cw-stage .cz') && (pageMode[(slides[P.S] || {}).id] || 'class') !== 'order') {        // fill-in-the-blank page: the simulated students fill the blanks too
+            const sl1 = slides[P.S];
+            SIMS.forEach((s, k) => setTimeout(() => {
+                if (slides[P.S] !== sl1) return;
+                $$('#view .cw-stage .cz').forEach(sp => {
+                    const host = sp.closest('.o'), key = 'c:' + host.dataset.id + ':' + sp.dataset.i;
+                    if (simResp.some(r => r.email === s.email && r.slide === sl1.id && r.key === key)) return;
+                    const o = (CW.findObj(sl1.objects, host.dataset.id) || {}).obj, bank = (o && o.cloze && o.cloze.bank) || [];
+                    const val = bank.length ? bank[Math.floor(Math.random() * bank.length)].t : '（模拟回答）';
+                    simResp.push({ slide: sl1.id, key, val, email: s.email, name: s.name, ts: Date.now(), type: 'cloze' });
+                });
+                renderSide(); checkAuto();
+            }, 2000 + k * 1500));
+        }
+        if (simOn && /^html:quiz/.test((slides[P.S] || {}).tag || '')) {                 // the quiz page made by the assistant: the simulated students answer too
+            const sl0 = slides[P.S];
+            SIMS.forEach((s, k) => setTimeout(() => {
+                if (slides[P.S] !== sl0) return;
+                const info = P.htmlQuizInfo && P.htmlQuizInfo(); if (!info) return;
+                info.forEach((q, qi) => { const key = 'q:' + (qi + 1); if (simResp.some(r => r.email === s.email && r.slide === sl0.id && r.key === key)) return; simResp.push({ slide: sl0.id, key, val: String.fromCharCode(65 + Math.floor(Math.random() * Math.max(1, q.n))), email: s.email, name: s.name, ts: Date.now(), type: 'quiz' }); });
+                renderSide(); checkAuto();
+            }, 2500 + k * 1500));
+            return;
+        }
         if (!simOn || !P.cur || !P.cur.hasQuiz) return;
         const sl = slides[P.S], qs = qsOf(sl); if ((pageMode[sl.id] || 'class') === 'order') return;
         SIMS.forEach((s, k) => setTimeout(() => {
@@ -573,7 +651,7 @@
             $('#pstep').textContent = st && st.k != null && st.total ? '步骤 ' + st.k + ' / ' + st.total : (st && st.pos ? '闪卡 ' + st.pos + ' / ' + st.total : '');
             const nt = $('#pnotes');
             if (!nt.querySelector('textarea')) {
-                nt.innerHTML = esc(sl.notes || '（这一页没有备注，点这里可以写）').replace(/\n/g, '<br>');
+                nt.innerHTML = sl.notes ? notesHtml(sl) : esc('（这一页没有备注，点这里可以写）');
                 nt.onclick = () => {
                     if (nt.querySelector('textarea')) return;
                     const ta = h('textarea', { rows: 8, style: { width: '100%' } }); ta.value = sl.notes || ''; nt.innerHTML = ''; nt.append(ta); ta.focus();
@@ -581,6 +659,26 @@
                 };
             }
         }, 'notes');
+        safe(() => {
+            let bx = $('#pcz'); if (!bx) { bx = h('div', { id: 'pcz', style: { margin: '8px 0' } }); const sec = $('#pqsec'); if (sec) sec.parentNode.insertBefore(bx, sec); }
+            const has = !!$('#view .cw-stage .cz'); bx.innerHTML = '';
+            if (has) bx.append(h('button', { class: 'btn sm', title: '你在讲者视图选的就是正确答案；公布后学生那边显示对错', onclick: () => { P.czPublish(); renderSide(); } }, P.czPublished() ? '✓ 已公布填空答案' : '公布填空答案（学生那边显示对错）'));
+        }, 'czbtn');
+        safe(() => {                       // what every student answered in each blank (grouped by answer, with the avatars)
+            let bx = $('#pczans'); if (!bx) { bx = h('div', { id: 'pczans', style: { margin: '6px 0 10px' } }); const a = $('#pcz'); if (a) a.after(bx); }
+            const stage = $('#view .cw-stage'), czs = stage ? $$('.cz', stage) : []; bx.innerHTML = '';
+            if (!czs.length) return;
+            const sl = slides[P.S], ans = P.czAnswersOf ? P.czAnswersOf(sl) : {};
+            bx.append(h('h4', null, '学生的填空答案'));
+            czs.forEach((sp, n) => {
+                const key = 'c:' + sp.closest('.o').dataset.id + ':' + sp.dataset.i, rows = respFor(sl.id, key), groups = {};
+                rows.forEach(r => { (groups[r.val] = groups[r.val] || []).push(avOf(r.email)); });
+                const right = (ans[key] || {}).t;
+                bx.append(h('div', { class: 'czrow' }, h('b', null, (n + 1) + '. '),
+                    Object.keys(groups).length ? Object.keys(groups).map(v => h('span', { class: 'czg' + (right ? (v === right ? ' ok' : ' no') : '') }, v + ' ', groups[v].map(av => h('img', { src: P.avatarUrl(av), alt: '' })))) : h('i', null, '还没有人答'),
+                    right ? h('span', { class: 'czr' }, '　✓ ' + right) : null));
+            });
+        }, 'czans');
         safe(() => {
             const qs = questionsOf(sl), pq = $('#pq'); pq.innerHTML = '';
             $('#pqsec').style.display = qs.length ? '' : 'none';
@@ -645,7 +743,7 @@
         if (PRES) {
             buildPresenter(); bindEditing();
             P.on('render', () => {
-                safe(() => { const sl = slides[P.S], st = P.cur && P.cur.state ? P.cur.state() : null; if (sl.type === 'flash' || ((/vocab|grammar/.test(sl.tag || '')) && st && st.k >= 1 && (sl.anim || []).some(a => a.para))) { if (ord.used) advanceOrd(false); ord.used = true; } }, 'rot');
+                safe(() => { const sl = slides[P.S], st = P.cur && P.cur.state ? P.cur.state() : null; if (sl.type === 'flash' || /^html:s?flash/.test(sl.tag || '') || (ROWMARK && /vocab|grammar/.test(sl.tag || '') && st && st.k >= 1 && (sl.anim || []).some(a => a.para))) { if (ord.used) advanceOrd(false); ord.used = true; } }, 'rot');
                 renderNext(); safe(renderSide, 'side'); pushBoardInk(); simRespondQuiz(); setTimeout(updateTurn, 150);
             });
             P.on('state', () => { clearTimeout(nx); nx = setTimeout(renderNext, 80); safe(renderSide, 'side'); renderMarks(); });
