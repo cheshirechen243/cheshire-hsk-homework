@@ -62,6 +62,7 @@ HSKShell.boot({ need: 'student', noBanner: true }, async (user, main) => {
   zOut.title = '缩小 Thu nhỏ'; zIn.title = '放大 Phóng to'; zPct.title = '恢复 100% · Về 100%'; zFit.title = '适合宽度 · Vừa chiều rộng';
   [zOut, zPct, zIn, zFit].forEach(b => { b.type = 'button'; zoomBox.appendChild(b); });
   row2.appendChild(zoomBox);
+  if (lesson.ink && !locked && window.HSKInk) row2.appendChild(HSKInk.toolbar());        // worksheets: type or hand-write (Vẽ / Chèn chữ / Tẩy / Hoàn tác)
   const tipBtn = $('button', 'btn sm blue', '💡 答案和评语 Đáp án & nhận xét ✓'); tipBtn.type = 'button'; tipBtn.style.display = locked ? '' : 'none';
   tipBtn.onclick = () => { const h = scrollerHideToggle(); tipBtn.textContent = h ? '💡 答案和评语 Đáp án & nhận xét ✗' : '💡 答案和评语 Đáp án & nhận xét ✓'; };
   row2.appendChild(tipBtn);
@@ -76,7 +77,7 @@ HSKShell.boot({ need: 'student', noBanner: true }, async (user, main) => {
   info.innerHTML = `<h2>${lname(lesson)} · ${lesson.title}</h2><div class="vi">${lesson.titleVi || ''}${lesson.subtitle ? ' · ' + lesson.subtitle : ''}</div>` +
     (asg ? `<div class="asgline">👥 ${asg.cls ? esc(asg.cls) : '全部班级 Tất cả'}${asg.due ? ` · ⏰ 截止 Hạn nộp: <b${isLate && !locked ? ' style="color:var(--bad)"' : ''}>${asg.due}</b>${isLate && !locked ? ' (已过期 · quá hạn,vẫn nộp được nhưng sẽ ghi là nộp muộn)' : ''}` : ''}</div>` : '') +
     (!locked && lesson.fields.some(f => f.pinyin) ? '<div class="howto" style="margin-top:8px">⌨️ <b>拼音怎么打 · Cách gõ pinyin</b>:<br><span class="vi">Gõ chữ + số thanh (1-4), ü gõ là <b>v</b>, bấm <b>Enter</b> sẽ tự đổi thành pinyin. VD: <b>nve4</b> → <b>nüè</b>, <b>lao3</b> → <b>lǎo</b>. <br>Sau j q x y, ü chỉ viết u (gõ u hoặc v đều được): <b>xve2</b> → <b>xué</b>.</span></div>' : '') +
-    (locked ? '' : '<p class="hint">在每一页的答题框里直接作答。✍ 按钮可以练习笔顺。作业会自动保存在这台设备上,做完后点右上角「提交」。<br><span class="vi">Làm bài trực tiếp trong các ô trả lời trên từng trang. Nút ✍ để luyện thứ tự nét. Bài được tự lưu trên thiết bị này; làm xong bấm “Nộp bài” ở góc trên bên phải.</span></p>');
+    (locked ? '' : lesson.ink ? '<p class="hint">在页面上直接作答：选择题点选项；填空可以在框里打字，也可以用上方工具栏<b>手写</b>（✏️ Vẽ 画/写，🔤 Chèn chữ 在任意位置打字，🧽 Tẩy 擦除，↩️ Hoàn tác 撤销，可换颜色）。要打字请先点「⌨ Gõ / Cuộn」。做完后点右上角「提交」。<br><span class="vi">Trắc nghiệm: bấm chọn đáp án. Điền chỗ trống: gõ chữ vào ô, hoặc <b>viết tay</b> bằng thanh công cụ phía trên (Vẽ / Chèn chữ / Tẩy / Hoàn tác, đổi màu). Muốn gõ chữ vào ô thì bấm “Gõ / Cuộn” trước. Làm xong bấm “Nộp bài” ở góc trên bên phải.</span></p>' : '<p class="hint">在每一页的答题框里直接作答。✍ 按钮可以练习笔顺。作业会自动保存在这台设备上,做完后点右上角「提交」。<br><span class="vi">Làm bài trực tiếp trong các ô trả lời trên từng trang. Nút ✍ để luyện thứ tự nét. Bài được tự lưu trên thiết bị này; làm xong bấm “Nộp bài” ở góc trên bên phải.</span></p>');
   const inner = $('div', 'scroll-inner'); inner.appendChild(info); inner.appendChild(pagesWrap); scroller.appendChild(inner);
   shellEl.appendChild(bar); shellEl.appendChild(scroller);
 
@@ -107,8 +108,10 @@ HSKShell.boot({ need: 'student', noBanner: true }, async (user, main) => {
   scroller.addEventListener('pointerup', endPan); scroller.addEventListener('pointercancel', endPan);
 
   const totalAnswerable = lesson.fields.filter(f => f.points > 0).length;
+  // worksheets: a blank also counts as done when the student hand-wrote on that page
+  const isDone = f => G.filled(f, answers[f.id]) || (lesson.ink && f.type !== 'choice' && f.type !== 'pick' && window.HSKInk && HSKInk.has(answers, f.page));
   const updateProg = () => {
-    const n = lesson.fields.filter(f => f.points > 0 && G.filled(f, answers[f.id])).length;
+    const n = lesson.fields.filter(f => f.points > 0 && isDone(f)).length;
     prog.innerHTML = `✏️ <b>${n}/${totalAnswerable}</b><small>Đã làm</small>`;
   };
   updateProg();
@@ -150,7 +153,7 @@ HSKShell.boot({ need: 'student', noBanner: true }, async (user, main) => {
     const btn = submitTop;
     // Two-step safety check before the final, irreversible submit.
     function confirmSubmit(go) {
-      const empty = lesson.fields.filter(f => f.points > 0 && !G.filled(f, answers[f.id]));
+      const empty = lesson.fields.filter(f => f.points > 0 && !isDone(f));
       const ov = $('div', 'modal-ov'); const m = $('div', 'modal');
       m.innerHTML = `<div class="modal-h"><b>⚠️ 提交前请再检查一遍 · Hãy kiểm tra lại trước khi nộp</b><button class="x" type="button">✕</button></div>
         <div class="warnbox"><b>提交后不能再修改!</b><br><span class="vi">Sau khi nộp sẽ <b>không thể sửa</b> được nữa!</span></div>
@@ -167,7 +170,7 @@ HSKShell.boot({ need: 'student', noBanner: true }, async (user, main) => {
     btn.onclick = () => confirmSubmit(async () => {
       btn.disabled = true; btn.textContent = '提交中… Đang nộp…';
       try {
-        const clean = {}; Object.entries(answers).forEach(([k, v]) => { if (v !== '' && v != null) clean[k] = v; });
+        const clean = {}; Object.entries(answers).forEach(([k, v]) => { if (v !== '' && v != null && !(k.startsWith('~ink') && !(v.a && v.a.length))) clean[k] = v; });
         // voice answers: the submission is saved FIRST (marked pending); the recordings then upload to the teacher's Google Drive in the background
         const queue = [];
         if (!S.isDemo) Object.entries(clean).filter(([, v]) => v && v.rec && v.rec.data).forEach(([fid, v]) => {
@@ -180,7 +183,7 @@ HSKShell.boot({ need: 'student', noBanner: true }, async (user, main) => {
         sub = await S.submit({ lessonId: id, email: user.email, name: user.name, cls: user.cls || '', asg: asg ? asg.code : '', late: !!isLate, answers: clean, lessonNo: lesson.no });
         try { localStorage.removeItem(draftKey); } catch (e) { }
         key = await S.loadKey(id).catch(() => null);
-        btn.remove(); Object.keys(answers).forEach(k => { if (!(k in clean)) delete answers[k]; });
+        btn.remove(); const inkBar = row2.querySelector('.inkbar'); if (inkBar) inkBar.remove(); Object.keys(answers).forEach(k => { if (!(k in clean)) delete answers[k]; });
         info.querySelector('.hint') && info.querySelector('.hint').remove();
         const res = drawResult(); summary(res); tipBtn.style.display = '';
         if (res) showResult(res, queue.length); else alert('已提交 Đã nộp');

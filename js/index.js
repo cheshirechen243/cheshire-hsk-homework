@@ -21,33 +21,6 @@ HSKShell.boot({ need: 'student' }, async (user, main) => {
   const showTab = k => { curTab = k; try { localStorage.setItem('hsk3.stab', k); } catch (e) { /* ignore */ } [...tabs.children].forEach(b => b.classList.toggle('on', b.dataset.k === k)); hwBox.style.display = k === 'hw' ? '' : 'none'; exBox.style.display = k === 'extra' ? '' : 'none'; liveBox.style.display = k === 'live' ? '' : 'none'; };
   Object.entries(T2).forEach(([k, v]) => { const b = $('button', 'tab', v); b.dataset.k = k; b.onclick = () => showTab(k); tabs.appendChild(b); });
   main.appendChild(tabs); main.appendChild(hwBox); main.appendChild(exBox); main.appendChild(liveBox);
-  // extra homework: a list the teacher keeps in extra/index.json (PDF worksheets for now)
-  (async () => {
-    const card = $('div', 'card');
-    card.innerHTML = '<h2>作业 · Bài tập</h2><p class="hint">老师额外布置的作业。点开看题，按老师说的方式完成。<br><span class="vi">Bài tập cô giao thêm. Mở bài ra xem và làm theo hướng dẫn của cô.</span></p>';
-    const box = $('div'); card.appendChild(box); exBox.appendChild(card);
-    let items = [];
-    try { const r = await fetch('extra/index.json?v=' + Date.now()); if (r.ok) items = (await r.json()).items || []; } catch (e) { /* none yet */ }
-    if (!items.length) { box.innerHTML = '<p class="hint">现在没有额外作业。<br><span class="vi">Hiện chưa có bài tập bổ sung.</span></p>'; return; }
-    const lv = [...new Set(items.map(x => x.level || 'HSK1'))].sort();
-    let cur = null; try { cur = localStorage.getItem('hsk3.exlevel'); } catch (e) { /* ignore */ }
-    if (!lv.includes(cur)) cur = lv[0];
-    const bar = $('div', 'tabs'); const list = $('div');
-    const draw = () => {
-      [...bar.children].forEach(b => b.classList.toggle('on', b.dataset.k === cur));
-      list.innerHTML = '';
-      let grp = null;
-      items.filter(x => (x.level || 'HSK1') === cur).sort((a, b) => (a.group || '').localeCompare(b.group || '') || (a.no || 0) - (b.no || 0)).forEach(x => {
-        if (x.group && x.group !== grp) { grp = x.group; const h = $('h3', null, x.group); h.style.margin = '14px 0 6px'; list.appendChild(h); }
-        const a = $('a', 'lcard'); a.href = x.file; a.target = '_blank'; a.rel = 'noopener';
-        a.innerHTML = '<div class="no">' + (x.no || '▶') + '</div><div class="t">' + x.title + '</div><div class="tv">' + (x.sub || '') + '</div><div class="s">打开 Mở ↗</div>';
-        list.appendChild(a);
-      });
-    };
-    if (lv.length > 1) lv.forEach(k => { const b = $('button', 'tab', k.replace('HSK', 'HSK ')); b.dataset.k = k; b.onclick = () => { cur = k; try { localStorage.setItem('hsk3.exlevel', k); } catch (e) { /* ignore */ } draw(); }; bar.appendChild(b); });
-    if (lv.length > 1) box.appendChild(bar);
-    box.appendChild(list); draw();
-  })();
   const liveCard = $('div', 'card');
   liveCard.innerHTML = '<h2>上课 · Lớp học trực tuyến</h2><p class="hint">老师开课后，这里会出现你们班的课堂，点“进入”就能看课件；也可以输入老师给的课堂码。<br><span class="vi">Khi cô mở lớp, lớp của em sẽ hiện ở đây. Hoặc nhập mã lớp cô gửi.</span></p>';
   const codeRow = $('div', 'row-ctl'); const codeIn = $('input'); codeIn.type = 'text'; codeIn.placeholder = '课堂码 Mã lớp（6 位）'; codeIn.maxLength = 6; codeIn.style.textTransform = 'uppercase';
@@ -71,6 +44,7 @@ HSKShell.boot({ need: 'student' }, async (user, main) => {
   const asgs = await S.listForClass(user.cls || '').catch(() => []);
   const lm = Object.fromEntries(lessons.map(l => [l.id, l]));
   const course = id => (lm[id] && lm[id].course) || 'HSK3';
+  const isHw = id => !!(lm[id] && lm[id].hw);               // extra-homework worksheets (the 作业 tab) vs. workbook lessons (the 练习册 tab)
 
   // one entry per lesson: what the student handed in and/or the open assignment for it
   const items = {};
@@ -79,50 +53,60 @@ HSKShell.boot({ need: 'student' }, async (user, main) => {
   const list = Object.entries(items).map(([id, it]) => ({ id, ...it, L: lm[id] || { no: (it.sub && it.sub.lessonNo) || '?', title: id } }));
   const order = x => (x.L.label ? 999 : Number(x.L.no) || 0);
 
-  const hist = $('div', 'card');
-  hist.innerHTML = '<h2>我的作业 · Bài tập của em</h2>';
-  // level switcher: students only look at one level at a time (remembered on this device)
-  const levels = [...new Set([...list.map(x => course(x.id)), ...lessons.filter(l => l.open).map(l => l.course || 'HSK3')])].sort();
-  let lvl = null; try { lvl = localStorage.getItem('hsk3.slevel'); } catch (e) { }
-  if (!levels.includes(lvl)) lvl = levels[levels.length - 1] || 'HSK3';
-  const lvBox = $('div'), histBody = $('div');
-  const drawHist = () => {
-    histBody.innerHTML = '';
-    const shown = list.filter(x => levels.length < 2 || course(x.id) === lvl).sort((a, b) => order(a) - order(b));
-    if (!shown.length) { histBody.appendChild($('p', 'hint', '现在没有作业。<br><span class="vi">Hiện chưa có bài tập nào.</span>')); return; }
-    const grid = $('div', 'lessons'); histBody.appendChild(grid);
-    shown.forEach(x => {
-      const L = x.L, s = x.sub, asg = s ? (s.asg || (x.asg && x.asg.code)) : (x.asg && x.asg.code);
-      const a = $('a', 'lcard'); a.href = asg ? 'lesson.html?a=' + encodeURIComponent(asg) : '#';
-      if (!asg) a.classList.add('off');
-      let date, badge;
-      if (s) {
-        date = new Date(s.submittedAt).toLocaleDateString() + (s.late ? ' · ⏰ 迟交 nộp muộn' : '');
-        badge = `<span class="badge ${s.graded ? 'ok' : 'wait'}">${s.graded ? '已批改 · Đã chấm ' + s.finalScore + '/' + s.finalMax + ' · ' + G.pct(s.finalScore, s.finalMax) : '已提交 · Đã nộp'}</span>`;
-      } else {
-        date = x.asg && x.asg.due ? '⏰ 截止 Hạn nộp: ' + x.asg.due : '&nbsp;';
-        badge = '<span class="badge todo">未提交 · Chưa nộp · 点击开始</span>';
-      }
-      a.innerHTML = `<div class="no">${L.label ? '★' : L.no}</div><div class="t">${L.title}</div><div class="tv">${L.titleVi || ''}</div><div class="s">${date}</div>${badge}`;
-      grid.appendChild(a);
-    });
-  };
-  if (levels.length > 1) {
-    const bar = $('div', 'lvbar', '<span>等级 · Cấp độ</span>'); bar.style.margin = '10px 0';
-    levels.forEach(c => { const b = $('button', 'lvbtn' + (c === lvl ? ' on' : ''), c); b.type = 'button'; b.onclick = () => { lvl = c; try { localStorage.setItem('hsk3.slevel', c); } catch (e) { } [...bar.querySelectorAll('.lvbtn')].forEach(x => x.classList.toggle('on', x === b)); drawHist(); }; bar.appendChild(b); });
-    lvBox.appendChild(bar);
+  // a board = level switcher + numbered cards (what the student handed in and/or the open assignment for it)
+  function board(box, title, hint, wantHw, lvKey) {
+    const hist = $('div', 'card');
+    hist.innerHTML = '<h2>' + title + '</h2>' + (hint ? '<p class="hint">' + hint + '</p>' : '');
+    const mineList = list.filter(x => isHw(x.id) === wantHw);
+    // level switcher: students only look at one level at a time (remembered on this device)
+    const levels = [...new Set([...mineList.map(x => course(x.id)), ...lessons.filter(l => l.open && !!l.hw === wantHw).map(l => l.course || 'HSK3')])].sort();
+    let lvl = null; try { lvl = localStorage.getItem(lvKey); } catch (e) { }
+    if (!levels.includes(lvl)) lvl = levels[levels.length - 1] || 'HSK3';
+    const lvBox = $('div'), histBody = $('div');
+    const draw = () => {
+      histBody.innerHTML = '';
+      const shown = mineList.filter(x => levels.length < 2 || course(x.id) === lvl).sort((a, b) => order(a) - order(b));
+      if (!shown.length) { histBody.appendChild($('p', 'hint', '现在没有作业。<br><span class="vi">Hiện chưa có bài tập nào.</span>')); return; }
+      const grid = $('div', 'lessons'); histBody.appendChild(grid);
+      shown.forEach(x => {
+        const L = x.L, s = x.sub, asg = s ? (s.asg || (x.asg && x.asg.code)) : (x.asg && x.asg.code);
+        const a = $('a', 'lcard'); a.href = asg ? 'lesson.html?a=' + encodeURIComponent(asg) : '#';
+        if (!asg) a.classList.add('off');
+        let date, badge;
+        if (s) {
+          date = new Date(s.submittedAt).toLocaleDateString() + (s.late ? ' · ⏰ 迟交 nộp muộn' : '');
+          badge = `<span class="badge ${s.graded ? 'ok' : 'wait'}">${s.graded ? '已批改 · Đã chấm ' + s.finalScore + '/' + s.finalMax + ' · ' + G.pct(s.finalScore, s.finalMax) : '已提交 · Đã nộp'}</span>`;
+        } else {
+          date = x.asg && x.asg.due ? '⏰ 截止 Hạn nộp: ' + x.asg.due : '&nbsp;';
+          badge = '<span class="badge todo">未提交 · Chưa nộp · 点击开始</span>';
+        }
+        a.innerHTML = `<div class="no">${L.label ? '★' : L.no}</div><div class="t">${L.title}</div><div class="tv">${L.titleVi || ''}</div><div class="s">${date}</div>${badge}`;
+        grid.appendChild(a);
+      });
+    };
+    if (levels.length > 1) {
+      const bar = $('div', 'lvbar', '<span>等级 · Cấp độ</span>'); bar.style.margin = '10px 0';
+      levels.forEach(c => { const b = $('button', 'lvbtn' + (c === lvl ? ' on' : ''), c); b.type = 'button'; b.onclick = () => { lvl = c; try { localStorage.setItem(lvKey, c); } catch (e) { } [...bar.querySelectorAll('.lvbtn')].forEach(x => x.classList.toggle('on', x === b)); draw(); }; bar.appendChild(b); });
+      lvBox.appendChild(bar);
+    }
+    hist.append(lvBox, histBody); draw();
+    box.appendChild(hist);
   }
-  hist.append(lvBox, histBody); drawHist();
-  hwBox.appendChild(hist);
+  board(hwBox, '我的练习册 · Sổ tay của em', '', false, 'hsk3.slevel');
+  board(exBox, '我的作业 · Bài tập của em', '老师额外布置的作业，在线完成：选择题自动给分，填空题老师批改；可以打字，也可以手写。<br><span class="vi">Bài tập cô giao thêm, làm trực tiếp trên web: trắc nghiệm tự chấm điểm, điền chỗ trống cô chấm; em có thể gõ chữ hoặc viết tay.</span>', true, 'hsk3.hlevel');
 
   // Teacher preview shortcut (never shown to students): one card, a level label + its lessons in course order, with a gap between levels
   if (user.role === 'teacher') {
-    const t = $('div', 'card'); t.innerHTML = '<h2>老师预览 · Xem thử</h2><p class="hint">学生看不到这个列表。正式布置请到「老师后台 → 布置作业」生成班级链接。</p>';
-    [...new Set(lessons.filter(l => l.open).map(l => l.course || 'HSK3'))].sort().forEach((c, k) => {
-      const h = $('div', 'lvhead' + (k ? ' again' : ''), c); t.appendChild(h); const g = $('div', 'lessons'); t.appendChild(g);
-      lessons.filter(l => l.open && (l.course || 'HSK3') === c).sort((a, b) => (a.label ? 999 : a.no) - (b.label ? 999 : b.no)).forEach(L => { const a = $('a', 'lcard'); a.href = 'lesson.html?l=' + L.id; a.innerHTML = `<div class="no">${L.label ? '★' : L.no}</div><div class="t">${L.title}</div><div class="tv">${L.titleVi || ''}</div>`; g.appendChild(a); });
-    });
-    hwBox.appendChild(t);
+    const preview = (box, wantHw) => {
+      const t = $('div', 'card'); t.innerHTML = '<h2>老师预览 · Xem thử</h2><p class="hint">学生看不到这个列表。正式布置请到「老师后台 → 布置作业」生成班级链接。</p>';
+      const mineL = lessons.filter(l => l.open && !!l.hw === wantHw);
+      [...new Set(mineL.map(l => l.course || 'HSK3'))].sort().forEach((c, k) => {
+        const h = $('div', 'lvhead' + (k ? ' again' : ''), c); t.appendChild(h); const g = $('div', 'lessons'); t.appendChild(g);
+        mineL.filter(l => (l.course || 'HSK3') === c).sort((a, b) => (a.label ? 999 : a.no) - (b.label ? 999 : b.no)).forEach(L => { const a = $('a', 'lcard'); a.href = 'lesson.html?l=' + L.id; a.innerHTML = `<div class="no">${L.label ? '★' : L.no}</div><div class="t">${L.title}</div><div class="tv">${L.titleVi || ''}</div>`; g.appendChild(a); });
+      });
+      if (mineL.length) box.appendChild(t);
+    };
+    preview(hwBox, false); preview(exBox, true);
   }
   showTab(curTab);
 });

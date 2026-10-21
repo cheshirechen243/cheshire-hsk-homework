@@ -442,6 +442,56 @@
    "subtitle": "HSK Mock Test (Level 2)",
    "open": true,
    "label": "模拟测试"
+  },
+  {
+   "id": "HW1-01",
+   "course": "入门 Ngữ âm",
+   "hw": true,
+   "no": 1,
+   "title": "你好",
+   "titleVi": "Xin chào",
+   "subtitle": "Bài tập Giáo trình Hán ngữ · Bài 1",
+   "open": true
+  },
+  {
+   "id": "HW1-02",
+   "course": "入门 Ngữ âm",
+   "hw": true,
+   "no": 2,
+   "title": "你忙吗？",
+   "titleVi": "Bạn có bận không?",
+   "subtitle": "Bài tập Giáo trình Hán ngữ · Bài 2",
+   "open": true
+  },
+  {
+   "id": "HW1-03",
+   "course": "入门 Ngữ âm",
+   "hw": true,
+   "no": 3,
+   "title": "你去邮局吗？",
+   "titleVi": "Bạn đi bưu điện không?",
+   "subtitle": "Bài tập Giáo trình Hán ngữ · Bài 3",
+   "open": true
+  },
+  {
+   "id": "HW1-04",
+   "course": "入门 Ngữ âm",
+   "hw": true,
+   "no": 4,
+   "title": "你去哪儿？",
+   "titleVi": "Bạn đi đâu?",
+   "subtitle": "Bài tập Giáo trình Hán ngữ · Bài 4",
+   "open": true
+  },
+  {
+   "id": "HW1-05",
+   "course": "入门 Ngữ âm",
+   "hw": true,
+   "no": 5,
+   "title": "这是王老师",
+   "titleVi": "Đây là thầy Vương",
+   "subtitle": "Bài tập Giáo trình Hán ngữ · Bài 5",
+   "open": true
   }
  ]
 }

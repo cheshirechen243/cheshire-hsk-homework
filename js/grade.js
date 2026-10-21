@@ -29,7 +29,7 @@
     let ok = false;
     let v = value && typeof value === 'object' ? value.v : value;
     if (field.pinyin && typeof v === 'string') v = toPinyin(v);          // "nve4" counts the same as "nüè"
-    if (field.type === 'choice' || field.type === 'pick') ok = norm(v) === norm(ans);
+    if (field.type === 'choice' || field.type === 'pick') ok = (Array.isArray(ans) ? ans : [ans]).some(a => norm(a) === norm(v));      // a list = several answers are accepted
     else {
       const list = Array.isArray(ans) ? ans : [ans];
       ok = norm(v) !== '' && list.some(a => norm(a) === norm(v));

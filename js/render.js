@@ -53,9 +53,9 @@
         if (f.type === 'choice') {
           const group = [];
           f.options.forEach(o => {
-            const d = mk(o.rect, 'f-opt' + (val === o.v ? ' on' : ''));
+            const d = mk(o.rect, 'f-opt' + (f.tick ? ' tick' : '') + (val === o.v ? ' on' : ''));
             const key = opts.key && opts.key[f.id];
-            if (locked && key === o.v && opts.showAnswers) d.classList.add('is-key');
+            if (locked && [].concat(key == null ? [] : key).includes(o.v) && opts.showAnswers) d.classList.add('is-key');
             d.title = o.v; group.push({ v: o.v, d });
             if (!locked) d.onclick = () => {
               const nv = answers[f.id] === o.v ? '' : o.v; set(nv);
@@ -86,7 +86,7 @@
           const d = mk(f.rect, 'f-essay'); const t = el('textarea'); t.value = val || ''; t.disabled = locked; t.rows = 2; t.spellcheck = false;
           t.oninput = () => { set(t.value); opts.rerender && opts.rerender(); }; d.appendChild(t); refs[f.id] = t;
         } else if (f.type === 'draw') {
-          const d = mk(f.rect, 'f-draw'); const c = el('canvas'); d.appendChild(c);
+          const d = mk(f.rect, 'f-draw' + (f.clear ? ' clear' : '')); const c = el('canvas'); d.appendChild(c);
           requestAnimationFrame(() => setupCanvas(c, val && val.img, locked, v => set(v ? { img: v } : ''), f));
           if (!locked) { const b = el('button', 'draw-clear', '↺'); b.type = 'button'; b.title = '清除 / Xoá'; b.onclick = e => { e.stopPropagation(); c._clear(); }; d.appendChild(b); }
         } else if (f.type === 'record') {
@@ -111,6 +111,7 @@
         if (res && opts.mode === 'review') addMarks(page, f, res, opts.key, pg, opts.comments);
         if (opts.onField) opts.onField(f, page);
       });
+      if (lesson.ink && window.HSKInk) HSKInk.attach(page, pi + 1, answers, locked, opts.onChange);   // hand-writing / typed-text layer (worksheets)
     });
     return refs;
   }
@@ -136,7 +137,7 @@
       if (f.type === 'choice') {
         const sel = (opts_answer(page, f.id) || {});
         f.options.forEach(o => {
-          const isKey = key && key[f.id] === o.v;
+          const isKey = key && [].concat(key[f.id] == null ? [] : key[f.id]).includes(o.v);
           const mc = 'mark' + (o.rect[3] < 0.03 ? ' sm' : '');                                  // tight options (syllable pairs, short words): small icon
           if (sel.v === o.v) put(mc, right ? '✅' : '❌', o.rect[0] + o.rect[2], o.rect[1]);
           else if (isKey && !right) put(mc, '✅', o.rect[0] + o.rect[2], o.rect[1]);

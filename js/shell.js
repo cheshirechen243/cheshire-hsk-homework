@@ -56,11 +56,11 @@
   }
 
   // display name of a lesson: 第N课, or its own label (e.g. the mock test)
-  window.lshort = L => (L && L.label) || ('第' + (L && L.no) + '课');
+  window.lshort = L => (L && L.label) || (L && L.hw ? '作业' + L.no : '第' + (L && L.no) + '课');
   window.lname = L => (L && L.course && L.course !== 'HSK3' ? L.course + ' ' : '') + lshort(L);
 
   // short code used in lists and Classroom titles: I-4 (HSK1 lesson 4), III-2 (HSK3 lesson 2), I-模拟
-  window.lcode = L => ({ HSK1: 'I', HSK2: 'II', HSK3: 'III' }[(L && L.course) || 'HSK3'] || 'III') + '-' + ((L && L.label) ? '模拟' : (L && L.no));
+  window.lcode = L => ({ HSK1: 'I', HSK2: 'II', HSK3: 'III' }[(L && L.course) || 'HSK3'] || (L && L.course) || 'III') + '-' + ((L && L.label) ? '模拟' : (L && L.hw ? '作业' : '') + (L && L.no));
 
   window.HSKShell = { boot, topline, $ };
 })();

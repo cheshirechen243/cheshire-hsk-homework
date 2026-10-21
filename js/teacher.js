@@ -75,7 +75,7 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
       const cnt = { none: 0, todo: 0, done: 0 }; f.forEach(r => cnt[statusOf(r)]++);
       sum.innerHTML = f.length ? `共 ${f.length} 人 · <b>未提交 ${cnt.none}</b> · 待批改 ${cnt.todo} · 已批改 ${cnt.done}` : '';
       if (!f.length) { wrap.innerHTML = '<p class="hint">还没有内容。先到「学生名单」登记学生,再在「布置作业」生成班级链接。</p>'; return; }
-      const t = $('table', 'tbl'); t.innerHTML = '<tr><th>学生</th><th>班级</th><th>课</th><th>提交时间</th><th>自动分</th><th>待批改</th><th>状态</th></tr>';
+      const t = $('table', 'tbl'); t.innerHTML = '<tr><th>学生</th><th>班级</th><th>课</th><th>提交时间</th><th title="没批改完显示自动分；批改完显示最终成绩">分数</th><th>待批改</th><th>状态</th></tr>';
       f.forEach(r => {
         const tr = $('tr', r._pending ? 'row pend' : 'row');
         const who = `<td><b>${esc(r.name)}</b><br><span class="vi">${esc(r.email)}</span></td><td>${esc(r.cls || '-')}</td><td><b>${lcode(lessonMap[r.lessonId] || { no: r.lessonNo })}</b></td>`;
@@ -85,7 +85,7 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
         } else {
           const x = r._res;
           const d = new Date(r.submittedAt), tm = `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-          tr.innerHTML = who + `<td>${tm}${r.late ? ' <span class="badge wait" style="position:static">迟交</span>' : ''}</td><td>${x ? x.auto + '/' + x.autoMax + ' · ' + G.pct(x.auto, x.autoMax) : '-'}</td><td>${x ? x.pending + ' 题' : '-'}</td><td><span class="badge ${r.graded ? 'ok' : 'wait'}" style="position:static">${r.graded ? '已批改' : '待批改'}</span></td>`;
+          tr.innerHTML = who + `<td>${tm}${r.late ? ' <span class="badge wait" style="position:static">迟交</span>' : ''}</td><td>${r.graded && r.finalMax ? '<b>' + r.finalScore + '/' + r.finalMax + ' · ' + G.pct(r.finalScore, r.finalMax) + '</b> <span class="vi">最终</span>' : (x ? '<span class="vi">自动</span> ' + x.auto + '/' + x.autoMax + ' · ' + G.pct(x.auto, x.autoMax) : '-')}</td><td>${r.graded ? '0 题' : (x ? x.pending + ' 题' : '-')}</td><td><span class="badge ${r.graded ? 'ok' : 'wait'}" style="position:static">${r.graded ? '已批改' : '待批改'}</span></td>`;
           tr.onclick = () => grade(r);
         }
         t.appendChild(tr);

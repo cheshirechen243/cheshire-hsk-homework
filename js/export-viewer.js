@@ -6,7 +6,7 @@
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
   const ROMAN = { HSK1: 'I', HSK2: 'II', HSK3: 'III' };
-  const code = L => (ROMAN[L.course || 'HSK3'] || 'III') + '-' + (L.label ? '模拟' : L.no);
+  const code = L => (ROMAN[L.course || 'HSK3'] || L.course || 'III') + '-' + (L.label ? '模拟' : (L.hw ? '作业' : '') + L.no);
   const fmtDate = s => { try { const d = new Date(s); return d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate(); } catch (e) { return ''; } };
   const app = document.getElementById('app');
   document.title = D.title;
