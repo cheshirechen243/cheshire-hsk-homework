@@ -1,0 +1,40 @@
+/* 课件工坊 · 对象/页面基础样式（编辑器和播放器共用） */
+.cw-stage{position:absolute;left:0;top:0;overflow:hidden;background:#fff;}
+.cw-bg,.cw-bgimg{position:absolute;inset:0;}
+.o{position:absolute;box-sizing:border-box;}
+.o .bgl{position:absolute;inset:0;}
+.o .tx{position:absolute;inset:0;display:flex;flex-direction:column;font-family:'Microsoft YaHei',sans-serif;font-size:28px;line-height:1.2;color:#000;outline:none;overflow:visible;}
+.o .tx p{margin:0;min-height:1em;}
+.o .tx p:empty::after{content:'\200b';}
+.o .im{position:absolute;inset:0;overflow:hidden;}
+.o-video video{width:100%;height:100%;display:block;background:#000;}
+.o-audio{cursor:pointer;} .o-audio img{pointer-events:none;}
+.o-stroke{cursor:pointer;position:absolute;} .o-stroke i{position:absolute;background:#eee;} .o-stroke .g1{left:50%;top:0;bottom:0;width:1px;} .o-stroke .g2{top:50%;left:0;right:0;height:1px;} .o-stroke span{position:relative;z-index:1;} .o-stroke:hover{filter:drop-shadow(0 4px 8px rgba(67,43,32,.3));}
+.o .gc{position:absolute;inset:0;}
+.o.go{cursor:pointer;}
+.o svg{pointer-events:none;}
+
+.cw-scwin{position:absolute;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;} .cw-sccont{position:relative;width:100%;}
+.cw-scwin::-webkit-scrollbar{width:9px;} .cw-scwin::-webkit-scrollbar-thumb{background:rgba(155,131,87,.5);border-radius:6px;} .cw-scwin::-webkit-scrollbar-track{background:rgba(155,131,87,.12);border-radius:6px;}
+.cw-scframe{position:absolute;border:1.5px dashed #BD582C;pointer-events:none;z-index:9999;} .cw-scframe::after{content:'滚动区';position:absolute;right:4px;top:-18px;font:700 11px sans-serif;color:#BD582C;}
+/* quiz + cloze (player) */
+.qz{cursor:pointer;} .qz.qk-fill{} .qok[data-qm=fill] .bgl{background:#3E8A57 !important;} .qbad[data-qm=fill] .bgl{background:#B8453A !important;} .qsel[data-qm=fill] .bgl{background:#40749B !important;}
+.qz[data-qm=tint]{border-radius:14px;} .qok[data-qm=tint] .bgl{background:rgba(62,138,87,.22) !important;border-radius:14px;} .qbad[data-qm=tint] .bgl{background:rgba(184,69,58,.2) !important;border-radius:14px;} .qsel[data-qm=tint] .bgl{background:rgba(64,116,155,.18) !important;border-radius:14px;}
+.qok[data-qm=tint]::after{content:'\2713';position:absolute;right:14px;top:50%;transform:translateY(-50%);font:700 34px sans-serif;color:#3E8A57;} .qbad[data-qm=tint]::after{content:'\2717';position:absolute;right:14px;top:50%;transform:translateY(-50%);font:700 34px sans-serif;color:#B8453A;}
+.qbad{animation:qshake .4s;} @keyframes qshake{20%{margin-left:-6px}40%{margin-left:6px}60%{margin-left:-4px}80%{margin-left:3px}}
+.cloze .cz{cursor:pointer;border-radius:6px;background:transparent;padding:0 2px;} .cloze .cz:hover{background:rgba(189,88,44,.10);} .cloze .cz.ok{background:rgba(62,138,87,.15);color:#2e7d4a;font-weight:700;} .cloze .cz.bad{background:rgba(184,69,58,.15);color:#B8453A;font-weight:700;} .cloze .cz.sel{background:rgba(64,116,155,.15);color:#40749B;font-weight:700;}
+
+
+/* PPT font names -> installed font files (Chrome groups HYYuJinLi 55U/65U/75U into one family) */
+@font-face{font-family:'HYYuJinLi 55U';src:local('HYYuJinLi-55U'),local('HYYuJinLi 55U');}
+@font-face{font-family:'HYYuJinLi 65U';src:local('HYYuJinLi-65U'),local('HYYuJinLi 65U');}
+@font-face{font-family:'HYYuJinLi 75U';src:local('HYYuJinLi-75U'),local('HYYuJinLi 75U');}
+
+/* quiz frame: rounded outline, green = right, red = wrong */
+.qframe{position:absolute;border:5px solid #40749B;border-radius:18px;pointer-events:none;z-index:5;box-shadow:0 0 0 3px rgba(255,255,255,.6);} .qframe.ok{border-color:#2E9B57;} .qframe.bad{border-color:#D23B30;animation:qshake .4s;}
+.qok .bgl,.qbad .bgl,.qsel .bgl{background:inherit;}
+
+.qframe .qbadge{position:absolute;right:14px;top:50%;transform:translateY(-50%);font-size:34px;line-height:1;} .qframe.ok,.qframe.bad{box-shadow:none;}
+.cw-scwin.snap{scroll-snap-type:y mandatory;} .cw-scwin .snapitem{scroll-snap-align:start;scroll-margin-top:6px;}
+
+.cloze .cz.ok,.cloze .cz.sel,.cloze .cz.bad{font-family:'KaiTi','STKaiti','楷体',serif !important;font-weight:400 !important;}
