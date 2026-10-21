@@ -117,8 +117,8 @@
             return '<span>Lục thư: ' + type + '</span>' + ((n.trad || part) ? '<span class="bt">' + CW.esc(n.trad) + (n.trad && part ? ' ' : '') + part + '</span>' : '');
         }
         const r = (window.CW_HZINFO || {})[c]; if (!r) return '';
-        const type = { x: 'Hình thanh', i: 'Hội ý', p: 'Tượng hình' }[r.t];
-        if (r.t === 'p' || (!r.t && !r.d)) return (type ? '<span>Lục thư: ' + type + '</span>' : '') + '<span class="bt">Chữ độc thể</span>';
+        const type = { x: 'Hình thanh', i: 'Hội ý', p: 'Tượng hình', z: 'Chỉ sự' }[r.t];
+        if (r.t === 'p' || r.t === 'z' || (!r.t && !r.d)) return (type ? '<span>Lục thư: ' + type + '</span>' : '') + '<span class="bt">Chữ độc thể</span>';
         let parts = r.t === 'x' ? [r.s, r.p] : r.t === 'i' ? Array.from(r.d || '') : [r.r];
         parts = parts.filter(Boolean);
         return (type ? '<span>Lục thư: ' + type + '</span>' : '') + (parts.length ? '<span class="bt">Bộ thủ: ' + CW.esc(parts.join('，')) + '</span>' : '');
