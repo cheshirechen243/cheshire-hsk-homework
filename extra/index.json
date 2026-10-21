@@ -1,0 +1,54 @@
+{
+ "items": [
+  {
+   "id": "h1-gthn-1",
+   "level": "HSK1",
+   "group": "GTHN · 拼音入门 Nhập môn phiên âm",
+   "no": 1,
+   "title": "Bài tập 1 - GTHN",
+   "sub": "Bài 1 · 2 trang",
+   "file": "extra/hsk1/bai-tap-1-gthn.pdf",
+   "added": "2026-10-22"
+  },
+  {
+   "id": "h1-gthn-2",
+   "level": "HSK1",
+   "group": "GTHN · 拼音入门 Nhập môn phiên âm",
+   "no": 2,
+   "title": "Bài tập 2 - GTHN",
+   "sub": "Bài 2 · 3 trang",
+   "file": "extra/hsk1/bai-tap-2-gthn.pdf",
+   "added": "2026-10-22"
+  },
+  {
+   "id": "h1-gthn-3",
+   "level": "HSK1",
+   "group": "GTHN · 拼音入门 Nhập môn phiên âm",
+   "no": 3,
+   "title": "Bài tập 3 - GTHN",
+   "sub": "Bài 3 · 5 trang",
+   "file": "extra/hsk1/bai-tap-3-gthn.pdf",
+   "added": "2026-10-22"
+  },
+  {
+   "id": "h1-gthn-4",
+   "level": "HSK1",
+   "group": "GTHN · 拼音入门 Nhập môn phiên âm",
+   "no": 4,
+   "title": "Bài tập 4 - GTHN",
+   "sub": "Bài 4 · 5 trang",
+   "file": "extra/hsk1/bai-tap-4-gthn.pdf",
+   "added": "2026-10-22"
+  },
+  {
+   "id": "h1-gthn-5",
+   "level": "HSK1",
+   "group": "GTHN · 拼音入门 Nhập môn phiên âm",
+   "no": 5,
+   "title": "Bài tập 5 - GTHN",
+   "sub": "Bài 5 · 5 trang",
+   "file": "extra/hsk1/bai-tap-5-gthn.pdf",
+   "added": "2026-10-22"
+  }
+ ]
+}
