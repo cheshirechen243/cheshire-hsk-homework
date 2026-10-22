@@ -12,6 +12,8 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
   // one level (HSK1 / HSK3 ...) at a time: pick the level first, then everything below only shows that level
   const courseOf = l => (l && l.course) || 'HSK3';
   let curTab = 'subs', curLevel = '';
+  const kindOf = l => (l && l.hw) ? 'hw' : 'wb';
+  let curKind = 'wb'; try { if (localStorage.getItem('hsk3.kind') === 'hw') curKind = 'hw'; } catch (e) { }
   const show = k => { curTab = k; [...tabs.children].forEach(b => b.classList.toggle('on', b.dataset.k === k)); lvBar.style.display = (k === 'students' || k === 'live') ? 'none' : ''; ({ subs: viewSubs, assign: viewAssign, students: viewStudents, edit: viewEdit, live: () => HSKLiveTeacher(body, { S, $, esc, toast, user }) })[k](); };
   // a student's voice answer: Drive preview player for uploaded files (the teacher owns them), <audio> for local demo data
   const recPlayer = (rc, graded) => {
@@ -21,19 +23,27 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
     if (rc.data) return `🎤${dur}<br><audio controls src="${rc.data}" style="width:100%"></audio>`;
     return rc.pending ? (graded ? '<i>🎤 录音已清理(空间不足时自动清理最早的已批改录音)· đã dọn bản ghi cũ</i>' : '<i>🎤 录音还没传上来(学生可能还在上传,或离开了页面)· chưa có bản ghi</i>') : '<i>(录音丢失)</i>';
   };  // lessons grouped by course (HSK1 / HSK3) for the drop-downs
-  const levelLessons = () => lessons.filter(l => l.open && courseOf(l) === curLevel);
+  const levelLessons = () => lessons.filter(l => l.open && kindOf(l) === curKind && courseOf(l) === curLevel);
   const lessonOpts = () => levelLessons().map(l => `<option value="${l.id}">${lshort(l)} ${esc(l.title)}</option>`).join('');
   const classesOf = list => [...new Set(list.map(s => (s.cls || '').trim()).filter(Boolean))].sort();
   Object.entries(T).forEach(([k, v]) => { const b = $('button', 'tab', v); b.dataset.k = k; b.onclick = () => show(k); tabs.appendChild(b); });
 
   const lessons = await S.listLessons().catch(() => []);
   const lessonMap = Object.fromEntries(lessons.map(l => [l.id, l]));
-  const inLevel = id => courseOf(lessonMap[id]) === curLevel;
+  const inLevel = id => kindOf(lessonMap[id]) === curKind && courseOf(lessonMap[id]) === curLevel;
   // level switcher bar (built once; remembers the last level)
-  const levels = [...new Set(lessons.filter(l => l.open).map(courseOf))].sort();
+  // two kinds of lessons: 练习册 (workbook lessons) and 作业 (the extra homework worksheets): pick the kind first, then the level, so links are never mixed up
+  const levelsOf = () => [...new Set(lessons.filter(l => l.open && kindOf(l) === curKind).map(courseOf))].sort();
+  let levels = levelsOf();
   curLevel = levels.includes(localStorage.getItem('hsk3.level')) ? localStorage.getItem('hsk3.level') : (levels[0] || 'HSK3');
-  const lvBar = $('div', 'lvbar'); lvBar.innerHTML = '<span>等级 · Cấp độ</span>';
-  levels.forEach(lv => { const b = $('button', 'lvbtn' + (lv === curLevel ? ' on' : ''), lv); b.type = 'button'; b.onclick = () => { curLevel = lv; try { localStorage.setItem('hsk3.level', lv); } catch (e) { } [...lvBar.querySelectorAll('.lvbtn')].forEach(x => x.classList.toggle('on', x === b)); show(curTab); }; lvBar.appendChild(b); });
+  const lvBar = $('div', 'lvbar');
+  const drawLv = () => {
+    lvBar.innerHTML = '<span>类型 · Loại</span>';
+    [['wb', '📚 练习册 Sổ tay'], ['hw', '📝 作业 Bài tập']].forEach(([k, label]) => { const b = $('button', 'lvbtn' + (k === curKind ? ' on' : ''), label); b.type = 'button'; b.onclick = () => { curKind = k; try { localStorage.setItem('hsk3.kind', k); } catch (e) { } levels = levelsOf(); if (!levels.includes(curLevel)) curLevel = levels[0] || curLevel; drawLv(); show(curTab); }; lvBar.appendChild(b); });
+    const sp = $('span', null, '等级 · Cấp độ'); sp.style.marginLeft = '14px'; lvBar.appendChild(sp);
+    levels.forEach(lv => { const b = $('button', 'lvbtn' + (lv === curLevel ? ' on' : ''), lv); b.type = 'button'; b.onclick = () => { curLevel = lv; try { localStorage.setItem('hsk3.level', lv); } catch (e) { } [...lvBar.querySelectorAll('.lvbtn')].forEach(x => x.classList.toggle('on', x === b)); drawLv(); show(curTab); }; lvBar.appendChild(b); });
+  };
+  drawLv();
   main.insertBefore(lvBar, tabs);
   const cache = {};   // lesson+key cache
   const getLK = async id => cache[id] || (cache[id] = { lesson: await S.loadLesson(id), key: await S.loadKey(id).catch(() => ({})) });

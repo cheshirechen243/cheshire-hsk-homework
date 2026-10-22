@@ -492,6 +492,156 @@
    "titleVi": "Đây là thầy Vương",
    "subtitle": "Bài tập Giáo trình Hán ngữ · Bài 5",
    "open": true
+  },
+  {
+   "id": "HWI-01",
+   "course": "HSK1",
+   "hw": true,
+   "no": 1,
+   "title": "AI小语，你好！",
+   "titleVi": "AI Tiểu Ngữ, xin chào!",
+   "subtitle": "Luyện tập HSK 1 · Bài 1",
+   "open": true
+  },
+  {
+   "id": "HWI-02",
+   "course": "HSK1",
+   "hw": true,
+   "no": 2,
+   "title": "我叫李文",
+   "titleVi": "Tôi tên là Lý Văn",
+   "subtitle": "Luyện tập HSK 1 · Bài 2",
+   "open": true
+  },
+  {
+   "id": "HWI-03",
+   "course": "HSK1",
+   "hw": true,
+   "no": 3,
+   "title": "我是中国人",
+   "titleVi": "Tôi là người Trung Quốc",
+   "subtitle": "Luyện tập HSK 1 · Bài 3",
+   "open": true
+  },
+  {
+   "id": "HWI-04",
+   "course": "HSK1",
+   "hw": true,
+   "no": 4,
+   "title": "我有两个孩子",
+   "titleVi": "Tôi có hai đứa con",
+   "subtitle": "Luyện tập HSK 1 · Bài 4",
+   "open": true
+  },
+  {
+   "id": "HWI-05",
+   "course": "HSK1",
+   "hw": true,
+   "no": 5,
+   "title": "今天我休息",
+   "titleVi": "Hôm nay tôi nghỉ",
+   "subtitle": "Luyện tập HSK 1 · Bài 5",
+   "open": true
+  },
+  {
+   "id": "HWI-06",
+   "course": "HSK1",
+   "hw": true,
+   "no": 6,
+   "title": "你的手机号是多少？",
+   "titleVi": "Số điện thoại của bạn là bao nhiêu?",
+   "subtitle": "Luyện tập HSK 1 · Bài 6",
+   "open": true
+  },
+  {
+   "id": "HWI-07",
+   "course": "HSK1",
+   "hw": true,
+   "no": 7,
+   "title": "我晚上六点半下班",
+   "titleVi": "Sáu rưỡi tối tôi tan làm",
+   "subtitle": "Luyện tập HSK 1 · Bài 7",
+   "open": true
+  },
+  {
+   "id": "HWI-08",
+   "course": "HSK1",
+   "hw": true,
+   "no": 8,
+   "title": "我爸爸也在医院工作",
+   "titleVi": "Bố tôi cũng làm việc ở bệnh viện",
+   "subtitle": "Luyện tập HSK 1 · Bài 8",
+   "open": true
+  },
+  {
+   "id": "HWI-09",
+   "course": "HSK1",
+   "hw": true,
+   "no": 9,
+   "title": "我明天上午在学校学习",
+   "titleVi": "Sáng mai tôi học ở trường",
+   "subtitle": "Luyện tập HSK 1 · Bài 9",
+   "open": true
+  },
+  {
+   "id": "HWI-10",
+   "course": "HSK1",
+   "hw": true,
+   "no": 10,
+   "title": "这儿的苹果真便宜！",
+   "titleVi": "Táo ở đây rẻ thật!",
+   "subtitle": "Luyện tập HSK 1 · Bài 10",
+   "open": true
+  },
+  {
+   "id": "HWI-11",
+   "course": "HSK1",
+   "hw": true,
+   "no": 11,
+   "title": "我读大学呢",
+   "titleVi": "Tôi đang học đại học",
+   "subtitle": "Luyện tập HSK 1 · Bài 11",
+   "open": true
+  },
+  {
+   "id": "HWI-12",
+   "course": "HSK1",
+   "hw": true,
+   "no": 12,
+   "title": "昨天下雪了",
+   "titleVi": "Hôm qua tuyết rơi rồi",
+   "subtitle": "Luyện tập HSK 1 · Bài 12",
+   "open": true
+  },
+  {
+   "id": "HWI-13",
+   "course": "HSK1",
+   "hw": true,
+   "no": 13,
+   "title": "请给我一杯茶",
+   "titleVi": "Xin cho tôi một cốc trà",
+   "subtitle": "Luyện tập HSK 1 · Bài 13",
+   "open": true
+  },
+  {
+   "id": "HWI-14",
+   "course": "HSK1",
+   "hw": true,
+   "no": 14,
+   "title": "我看了一个电影",
+   "titleVi": "Tôi đã xem một bộ phim",
+   "subtitle": "Luyện tập HSK 1 · Bài 14",
+   "open": true
+  },
+  {
+   "id": "HWI-15",
+   "course": "HSK1",
+   "hw": true,
+   "no": 15,
+   "title": "大兴机场见！",
+   "titleVi": "Hẹn gặp ở sân bay Đại Hưng!",
+   "subtitle": "Luyện tập HSK 1 · Bài 15",
+   "open": true
   }
  ]
 }
