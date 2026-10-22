@@ -59,7 +59,7 @@ HSKShell.boot({ need: 'student' }, async (user, main) => {
     hist.innerHTML = '<h2>' + title + '</h2>' + (hint ? '<p class="hint">' + hint + '</p>' : '');
     const mineList = list.filter(x => isHw(x.id) === wantHw);
     // level switcher: students only look at one level at a time (remembered on this device)
-    const levels = [...new Set([...mineList.map(x => course(x.id)), ...lessons.filter(l => l.open && !!l.hw === wantHw).map(l => l.course || 'HSK3')])].sort();
+    const levels = [...new Set([...mineList.map(x => course(x.id)), ...lessons.filter(l => l.open && !!l.hw === wantHw).map(l => l.course || 'HSK3')])].sort(lvOrder);
     let lvl = null; try { lvl = localStorage.getItem(lvKey); } catch (e) { }
     if (!levels.includes(lvl)) lvl = levels[levels.length - 1] || 'HSK3';
     const lvBox = $('div'), histBody = $('div');
@@ -100,7 +100,7 @@ HSKShell.boot({ need: 'student' }, async (user, main) => {
     const preview = (box, wantHw) => {
       const t = $('div', 'card'); t.innerHTML = '<h2>老师预览 · Xem thử</h2><p class="hint">学生看不到这个列表。正式布置请到「老师后台 → 布置作业」生成班级链接。</p>';
       const mineL = lessons.filter(l => l.open && !!l.hw === wantHw);
-      [...new Set(mineL.map(l => l.course || 'HSK3'))].sort().forEach((c, k) => {
+      [...new Set(mineL.map(l => l.course || 'HSK3'))].sort(lvOrder).forEach((c, k) => {
         const h = $('div', 'lvhead' + (k ? ' again' : ''), c); t.appendChild(h); const g = $('div', 'lessons'); t.appendChild(g);
         mineL.filter(l => (l.course || 'HSK3') === c).sort((a, b) => (a.label ? 999 : a.no) - (b.label ? 999 : b.no)).forEach(L => { const a = $('a', 'lcard'); a.href = 'lesson.html?l=' + L.id; a.innerHTML = `<div class="no">${L.label ? '★' : L.no}</div><div class="t">${L.title}</div><div class="tv">${L.titleVi || ''}</div>`; g.appendChild(a); });
       });

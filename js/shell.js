@@ -62,5 +62,8 @@
   // short code used in lists and Classroom titles: I-4 (HSK1 lesson 4), III-2 (HSK3 lesson 2), I-模拟
   window.lcode = L => ({ HSK1: 'I', HSK2: 'II', HSK3: 'III' }[(L && L.course) || 'HSK3'] || (L && L.course) || 'III') + '-' + ((L && L.label) ? '模拟' : (L && L.hw ? '作业' : '') + (L && L.no));
 
+  // level order: the pre-HSK level (入门 Ngữ âm) first, then HSK1, HSK2 ...
+  window.lvOrder = (a, b) => ((/^HSK/.test(a) ? 1 : 0) - (/^HSK/.test(b) ? 1 : 0)) || String(a).localeCompare(String(b));
+
   window.HSKShell = { boot, topline, $ };
 })();

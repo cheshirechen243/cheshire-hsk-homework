@@ -33,7 +33,7 @@ HSKShell.boot({ need: 'teacher' }, async (user, main) => {
   const inLevel = id => kindOf(lessonMap[id]) === curKind && courseOf(lessonMap[id]) === curLevel;
   // level switcher bar (built once; remembers the last level)
   // two kinds of lessons: 练习册 (workbook lessons) and 作业 (the extra homework worksheets): pick the kind first, then the level, so links are never mixed up
-  const levelsOf = () => [...new Set(lessons.filter(l => l.open && kindOf(l) === curKind).map(courseOf))].sort();
+  const levelsOf = () => [...new Set(lessons.filter(l => l.open && kindOf(l) === curKind).map(courseOf))].sort(lvOrder);
   let levels = levelsOf();
   curLevel = levels.includes(localStorage.getItem('hsk3.level')) ? localStorage.getItem('hsk3.level') : (levels[0] || 'HSK3');
   const lvBar = $('div', 'lvbar');
