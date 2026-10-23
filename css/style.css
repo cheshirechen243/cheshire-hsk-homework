@@ -155,6 +155,13 @@ body.lesson-body { overflow: hidden; }
 .f-text.hanzi input { font-size: 3.2cqw; background: transparent; }
 
 .f-essay textarea { font-size: 2.5cqw; text-align: left; resize: none; line-height: 1.25; padding: .3cqw .8cqw; }
+/* typed answers on the printed answer areas: no second underline */
+.f-text.noline input { border-bottom: 0; text-align: left; padding: 0 1cqw 1.2cqw; border-radius: 0; }
+.f-text.noline.lg input { font-size: 3.2cqw; }
+.f-text.grid textarea { position: absolute; top: 0; height: 100%; margin: 0; padding: 0; border: 0; background: transparent; resize: none; overflow: hidden; outline: 0; box-shadow: none; color: var(--ink); font-family: var(--hand), "KaiTi", serif; font-weight: 700; text-align: left; white-space: pre-wrap; word-break: break-all; line-break: anywhere; }
+.f-text.grid textarea:disabled { opacity: 1; -webkit-text-fill-color: currentColor; }
+.f-text.grid.is-ok textarea, .f-text.grid.is-bad textarea { text-decoration: none; }
+.f-essay.ruled textarea { border: 0; border-radius: 0; padding: 0 .4cqw; overflow: hidden; position: relative; top: -.8cqw; }
 .f-text input:disabled, .f-essay textarea:disabled { opacity: 1; -webkit-text-fill-color: currentColor; }
 .f-text.is-ok input { border-color: var(--ok); background: rgba(46,155,95,.18); }
 .f-text.is-bad input { border-color: var(--bad); background: rgba(216,52,95,.12); text-decoration: line-through; text-decoration-color: rgba(216,52,95,.7); }

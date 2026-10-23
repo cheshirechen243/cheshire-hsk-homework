@@ -70,7 +70,15 @@
           if (!locked) d.onclick = () => openPick(d, f, val, v => { set(v); t.textContent = v; d.classList.toggle('empty', !v); opts.rerender && opts.rerender(); });
           refs[f.id] = d;
         } else if (f.type === 'text' || f.type === 'hanzi') {
-          const d = mk(f.rect, 'f-text ' + (f.type === 'hanzi' ? 'hanzi' : (f.size || 'md')) + (f.pinyin ? ' pyn' : ''));
+          const d = mk(f.rect, 'f-text ' + (f.type === 'hanzi' ? 'hanzi' : (f.size || 'md')) + (f.pinyin ? ' pyn' : '') + (f.noline ? ' noline' : '') + (f.grid ? ' grid' : ''));
+          if (f.grid) {
+            // 米字格: a textarea whose characters advance exactly one cell (glyph 80% of the cell + 20% letter-spacing), wrapped every `cols` characters
+            const c = f.rect[2] * 100 / f.grid.cols, g = el('textarea'); g.value = val || ''; g.disabled = locked; g.spellcheck = false; g.maxLength = f.grid.cols * f.grid.rows;
+            g.style.cssText = `font-size:${c * .8}cqw;letter-spacing:${c * .2}cqw;line-height:${c}cqw;left:${c * .1}cqw;width:${c * f.grid.cols + .02}cqw`;
+            g.onkeydown = e => { if (e.key === 'Enter') e.preventDefault(); };
+            g.oninput = () => { g.value = g.value.replace(/[\r\n]/g, ''); set(g.value); opts.rerender && opts.rerender(); };
+            d.appendChild(g); refs[f.id] = g; return;
+          }
           const i = el('input'); i.type = 'text'; i.value = val || ''; i.disabled = locked; i.autocomplete = 'off'; i.setAttribute('autocapitalize', 'off'); i.spellcheck = false;
           if (f.type === 'hanzi') i.maxLength = 2;
           if (f.pinyin && !locked && window.HSKPinyin) HSKPinyin.attach(i);
@@ -119,6 +127,7 @@
           paint(); refs[f.id] = d;
         } else if (f.type === 'essay') {
           const d = mk(f.rect, 'f-essay'); const t = el('textarea'); t.value = val || ''; t.disabled = locked; t.rows = 2; t.spellcheck = false;
+          if (f.lh) { d.classList.add('ruled'); t.style.cssText = `line-height:${f.lh * 100}cqw;font-size:${f.lh * 100 * .72}cqw`; }   // lines of text sit on the printed rules
           t.oninput = () => { set(t.value); opts.rerender && opts.rerender(); }; d.appendChild(t); refs[f.id] = t;
         } else if (f.type === 'draw') {
           const d = mk(f.rect, 'f-draw' + (f.clear ? ' clear' : '')); const c = el('canvas'); d.appendChild(c);
