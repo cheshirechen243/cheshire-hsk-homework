@@ -644,6 +644,168 @@
    "open": true
   },
   {
+   "id": "HWIII-01",
+   "hw": true,
+   "no": 1,
+   "title": "我们去机场接你们",
+   "titleVi": "Chúng tôi sẽ ra sân bay đón các bạn",
+   "subtitle": "Luyện tập HSK 3 · Bài 1",
+   "open": true
+  },
+  {
+   "id": "HWIII-02",
+   "hw": true,
+   "no": 2,
+   "title": "你们想吃什么就点什么",
+   "titleVi": "Các bạn muốn ăn gì thì gọi món đó",
+   "subtitle": "Luyện tập HSK 3 · Bài 2",
+   "open": true
+  },
+  {
+   "id": "HWIII-03",
+   "hw": true,
+   "no": 3,
+   "title": "这个小区挺好的",
+   "titleVi": "Khu dân cư này khá tốt",
+   "subtitle": "Luyện tập HSK 3 · Bài 3",
+   "open": true
+  },
+  {
+   "id": "HWIII-04",
+   "hw": true,
+   "no": 4,
+   "title": "这家宾馆跟别的都不一样",
+   "titleVi": "Khách sạn này không giống những nơi khác",
+   "subtitle": "Luyện tập HSK 3 · Bài 4",
+   "open": true
+  },
+  {
+   "id": "HWIII-05",
+   "hw": true,
+   "no": 5,
+   "title": "这样的照片才好看",
+   "titleVi": "Ảnh như thế này mới đẹp",
+   "subtitle": "Luyện tập HSK 3 · Bài 5",
+   "open": true
+  },
+  {
+   "id": "HWIII-06",
+   "hw": true,
+   "no": 6,
+   "title": "高铁上还可以点外卖",
+   "titleVi": "Trên tàu cao tốc còn có thể đặt đồ ăn mang đi",
+   "subtitle": "Luyện tập HSK 3 · Bài 6",
+   "open": true
+  },
+  {
+   "id": "HWIII-07",
+   "hw": true,
+   "no": 7,
+   "title": "那条裙子比短裤更好看",
+   "titleVi": "Chiếc váy kia hợp hơn chiếc quần short",
+   "subtitle": "Luyện tập HSK 3 · Bài 7",
+   "open": true
+  },
+  {
+   "id": "HWIII-08",
+   "hw": true,
+   "no": 8,
+   "title": "今天我出院了",
+   "titleVi": "Hôm nay tôi xuất viện rồi",
+   "subtitle": "Luyện tập HSK 3 · Bài 8",
+   "open": true
+  },
+  {
+   "id": "HWIII-09",
+   "hw": true,
+   "no": 9,
+   "title": "打不好没关系",
+   "titleVi": "Chơi không giỏi cũng không sao",
+   "subtitle": "Luyện tập HSK 3 · Bài 9",
+   "open": true
+  },
+  {
+   "id": "HWIII-10",
+   "hw": true,
+   "no": 10,
+   "title": "你明天再把书还给我",
+   "titleVi": "Ngày mai bạn hãy trả sách lại cho tôi",
+   "subtitle": "Luyện tập HSK 3 · Bài 10",
+   "open": true
+  },
+  {
+   "id": "HWIII-11",
+   "hw": true,
+   "no": 11,
+   "title": "看来我没办法解决这个问题",
+   "titleVi": "Xem ra tôi không có cách giải quyết vấn đề này",
+   "subtitle": "Luyện tập HSK 3 · Bài 11",
+   "open": true
+  },
+  {
+   "id": "HWIII-12",
+   "hw": true,
+   "no": 12,
+   "title": "这个季节天气变化很快",
+   "titleVi": "Thời tiết mùa này thay đổi rất nhanh",
+   "subtitle": "Luyện tập HSK 3 · Bài 12",
+   "open": true
+  },
+  {
+   "id": "HWIII-13",
+   "hw": true,
+   "no": 13,
+   "title": "我的新邻居来自英国",
+   "titleVi": "Hàng xóm mới của tôi đến từ nước Anh",
+   "subtitle": "Luyện tập HSK 3 · Bài 13",
+   "open": true
+  },
+  {
+   "id": "HWIII-14",
+   "hw": true,
+   "no": 14,
+   "title": "这本书被别人借走了",
+   "titleVi": "Cuốn sách này bị người khác mượn mất rồi",
+   "subtitle": "Luyện tập HSK 3 · Bài 14",
+   "open": true
+  },
+  {
+   "id": "HWIII-15",
+   "hw": true,
+   "no": 15,
+   "title": "我是半个南京人",
+   "titleVi": "Tôi là nửa người Nam Kinh",
+   "subtitle": "Luyện tập HSK 3 · Bài 15",
+   "open": true
+  },
+  {
+   "id": "HWIII-16",
+   "hw": true,
+   "no": 16,
+   "title": "我听说有的熊猫出国了",
+   "titleVi": "Tôi nghe nói có một số gấu trúc đã ra nước ngoài",
+   "subtitle": "Luyện tập HSK 3 · Bài 16",
+   "open": true
+  },
+  {
+   "id": "HWIII-17",
+   "hw": true,
+   "no": 17,
+   "title": "我要多向认真的人学习",
+   "titleVi": "Tôi muốn học hỏi nhiều hơn từ những người nghiêm túc",
+   "subtitle": "Luyện tập HSK 3 · Bài 17",
+   "open": true
+  },
+  {
+   "id": "HWIII-18",
+   "hw": true,
+   "no": 18,
+   "title": "我学会了包饺子",
+   "titleVi": "Tôi đã học được cách gói sủi cảo",
+   "subtitle": "Luyện tập HSK 3 · Bài 18",
+   "open": true
+  },
+  {
    "id": "HWII-01",
    "course": "HSK2",
    "hw": true,
