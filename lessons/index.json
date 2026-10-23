@@ -642,6 +642,156 @@
    "titleVi": "Hẹn gặp ở sân bay Đại Hưng!",
    "subtitle": "Luyện tập HSK 1 · Bài 15",
    "open": true
+  },
+  {
+   "id": "HWII-01",
+   "course": "HSK2",
+   "hw": true,
+   "no": 1,
+   "title": "她请我们吃了北京烤鸭",
+   "titleVi": "Cô ấy mời chúng tôi ăn vịt quay Bắc Kinh",
+   "subtitle": "Luyện tập HSK 2 · Bài 1",
+   "open": true
+  },
+  {
+   "id": "HWII-02",
+   "course": "HSK2",
+   "hw": true,
+   "no": 2,
+   "title": "还是打车去北大吧",
+   "titleVi": "Hay là đi taxi đến Đại học Bắc Kinh nhé",
+   "subtitle": "Luyện tập HSK 2 · Bài 2",
+   "open": true
+  },
+  {
+   "id": "HWII-03",
+   "course": "HSK2",
+   "hw": true,
+   "no": 3,
+   "title": "我想去西安旅游",
+   "titleVi": "Tôi muốn đi Tây An du lịch",
+   "subtitle": "Luyện tập HSK 2 · Bài 3",
+   "open": true
+  },
+  {
+   "id": "HWII-04",
+   "course": "HSK2",
+   "hw": true,
+   "no": 4,
+   "title": "你穿红色的很好看",
+   "titleVi": "Bạn mặc màu đỏ rất đẹp",
+   "subtitle": "Luyện tập HSK 2 · Bài 4",
+   "open": true
+  },
+  {
+   "id": "HWII-05",
+   "course": "HSK2",
+   "hw": true,
+   "no": 5,
+   "title": "第一次去中国朋友家",
+   "titleVi": "Lần đầu đến nhà bạn người Trung Quốc",
+   "subtitle": "Luyện tập HSK 2 · Bài 5",
+   "open": true
+  },
+  {
+   "id": "HWII-06",
+   "course": "HSK2",
+   "hw": true,
+   "no": 6,
+   "title": "小雪，生日快乐！",
+   "titleVi": "Tiểu Tuyết, chúc mừng sinh nhật!",
+   "subtitle": "Luyện tập HSK 2 · Bài 6",
+   "open": true
+  },
+  {
+   "id": "HWII-07",
+   "course": "HSK2",
+   "hw": true,
+   "no": 7,
+   "title": "他篮球打得很好",
+   "titleVi": "Anh ấy chơi bóng rổ rất giỏi",
+   "subtitle": "Luyện tập HSK 2 · Bài 7",
+   "open": true
+  },
+  {
+   "id": "HWII-08",
+   "course": "HSK2",
+   "hw": true,
+   "no": 8,
+   "title": "虽然你忘了，但是我记得",
+   "titleVi": "Tuy bạn quên rồi, nhưng mình vẫn nhớ",
+   "subtitle": "Luyện tập HSK 2 · Bài 8",
+   "open": true
+  },
+  {
+   "id": "HWII-09",
+   "course": "HSK2",
+   "hw": true,
+   "no": 9,
+   "title": "我去买杯奶茶",
+   "titleVi": "Tôi đi mua một ly trà sữa",
+   "subtitle": "Luyện tập HSK 2 · Bài 9",
+   "open": true
+  },
+  {
+   "id": "HWII-10",
+   "course": "HSK2",
+   "hw": true,
+   "no": 10,
+   "title": "就要考试了",
+   "titleVi": "Sắp thi rồi",
+   "subtitle": "Luyện tập HSK 2 · Bài 10",
+   "open": true
+  },
+  {
+   "id": "HWII-11",
+   "course": "HSK2",
+   "hw": true,
+   "no": 11,
+   "title": "我最喜欢吃中国菜",
+   "titleVi": "Tôi thích nhất ăn món Trung Quốc",
+   "subtitle": "Luyện tập HSK 2 · Bài 11",
+   "open": true
+  },
+  {
+   "id": "HWII-12",
+   "course": "HSK2",
+   "hw": true,
+   "no": 12,
+   "title": "这里比北京冷多了",
+   "titleVi": "Ở đây lạnh hơn Bắc Kinh nhiều",
+   "subtitle": "Luyện tập HSK 2 · Bài 12",
+   "open": true
+  },
+  {
+   "id": "HWII-13",
+   "course": "HSK2",
+   "hw": true,
+   "no": 13,
+   "title": "我们爱上中文课",
+   "titleVi": "Chúng tôi yêu thích lớp tiếng Trung",
+   "subtitle": "Luyện tập HSK 2 · Bài 13",
+   "open": true
+  },
+  {
+   "id": "HWII-14",
+   "course": "HSK2",
+   "hw": true,
+   "no": 14,
+   "title": "一个人过年多没意思啊",
+   "titleVi": "Một mình đón Tết thật chán",
+   "subtitle": "Luyện tập HSK 2 · Bài 14",
+   "open": true
+  },
+  {
+   "id": "HWII-15",
+   "course": "HSK2",
+   "hw": true,
+   "no": 15,
+   "title": "我想再去一次中国",
+   "titleVi": "Tôi muốn đi Trung Quốc thêm lần nữa",
+   "subtitle": "Luyện tập HSK 2 · Bài 15",
+   "open": true
   }
  ]
 }
