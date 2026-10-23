@@ -137,6 +137,17 @@ body.lesson-body { overflow: hidden; }
 .f-pick { display: flex; align-items: center; justify-content: center; border: 2.5px solid var(--outline); background: rgba(255,230,243,.75); border-radius: 6px; cursor: pointer; box-shadow: 0 2px 0 rgba(61,55,96,.25); }
 .f-pick.empty:hover { background: rgba(165,214,250,.7); }
 .f-pick .f-val { font: 700 2.9cqw var(--head); color: var(--ink); position: relative; top: -.45cqw; line-height: 1; }
+/* sort the parts of a sentence: every part is a draggable button */
+.f-sort { background: #fff; border: 2px solid var(--outline); border-radius: 1.4cqw; padding: .5cqw 1cqw; display: flex; flex-direction: column; justify-content: space-between; gap: .4cqw; box-sizing: border-box; user-select: none; -webkit-user-select: none; touch-action: none; }
+.f-sort .sort-pool, .f-sort .sort-line { display: flex; flex-wrap: wrap; align-items: center; gap: .6cqw 1cqw; min-height: 3.6cqw; }
+.f-sort .sort-line { border-bottom: 3px dashed var(--outline); flex: 1; align-content: center; }
+.f-sort .sort-line:empty::before { content: '↓ 把词语拖到这里 · Kéo từ vào đây'; color: #9aa; font: 600 1.7cqw var(--head); }
+.f-sort .sort-chip { font: 700 2.3cqw var(--head); color: var(--ink); background: rgba(255,230,243,.95); border: 2px solid var(--outline); border-radius: 1cqw; padding: .1cqw 1.2cqw; line-height: 1.25; cursor: grab; box-shadow: 0 .3cqw 0 rgba(0,0,0,.22); touch-action: none; }
+.f-sort .sort-chip.dragging { opacity: .25; }
+.f-sort .sort-line .sort-chip { background: rgba(224,242,255,.98); }
+.sort-ghost { position: fixed; z-index: 9999; pointer-events: none; font: 700 22px sans-serif; background: #ffe6f3; border: 2px solid #333; border-radius: 10px; padding: 2px 14px; box-shadow: 0 6px 14px rgba(0,0,0,.3); }
+.f-sort.is-ok { border-color: var(--ok); background: rgba(46,155,95,.12); } .f-sort.is-bad { border-color: var(--bad); background: rgba(216,52,95,.1); }
+.f-sort.locked .sort-chip { cursor: default; }
 .f-pick.is-ok { border-color: var(--ok); background: rgba(46,155,95,.2); } .f-pick.is-bad { border-color: var(--bad); background: rgba(216,52,95,.14); }
 .f-text input, .f-essay textarea { width: 100%; height: 100%; border: 0; border-bottom: 3px solid var(--outline); background: rgba(255,230,243,.7); border-radius: 4px 4px 0 0; box-shadow: none; padding: 0 .5cqw; color: var(--ink); font-family: var(--hand); font-weight: 700; text-align: center; }
 .f-text input:focus, .f-essay textarea:focus { background: rgba(224,242,255,.9); border-bottom-color: var(--blue-deep); box-shadow: none; }

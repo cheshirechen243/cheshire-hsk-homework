@@ -82,6 +82,41 @@
             d.appendChild(b);
           }
           refs[f.id] = i;
+        } else if (f.type === 'sort') {
+          // parts of a sentence as buttons: drag them (or tap) into the line in the right order; the answer is the parts joined by spaces
+          const d = mk(f.rect, 'f-sort' + (locked ? ' locked' : '')); const pool = el('div', 'sort-pool'), line = el('div', 'sort-line'); d.appendChild(pool); d.appendChild(line);
+          const items = (f.items || []).slice(); let ans = [];
+          (typeof val === 'string' ? val.split(' ').filter(Boolean) : []).forEach(t => { const left = items.slice(); ans.forEach(a => left.splice(left.indexOf(a), 1)); if (left.includes(t)) ans.push(t); });
+          const rest = () => { const left = items.slice(); ans.forEach(a => left.splice(left.indexOf(a), 1)); return left; };
+          const commit = () => { set(ans.join(' ')); paint(); opts.rerender && opts.rerender(); };
+          const chip = (t, where, i) => {
+            const b = el('button', 'sort-chip', t); b.type = 'button'; if (locked) return b;
+            b.onpointerdown = e => {
+              if (e.button) return; e.preventDefault(); const sx = e.clientX, sy = e.clientY, r = b.getBoundingClientRect(); let ghost = null, moved = false;
+              const mv = ev => {
+                if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 5) return;
+                if (!moved) { moved = true; ghost = el('div', 'sort-ghost', t); document.body.appendChild(ghost); b.classList.add('dragging'); }
+                ghost.style.left = (ev.clientX - ghost.offsetWidth / 2) + 'px'; ghost.style.top = (ev.clientY - ghost.offsetHeight / 2) + 'px';
+              };
+              const up = ev => {
+                document.removeEventListener('pointermove', mv); document.removeEventListener('pointerup', up); document.removeEventListener('pointercancel', up);
+                if (ghost) ghost.remove();
+                if (!moved) { if (where === 'pool') ans.push(t); else ans.splice(i, 1); return commit(); }
+                const over = document.elementFromPoint(ev.clientX, ev.clientY), onLine = over && (over === line || line.contains(over));
+                if (onLine) {
+                  const others = [...line.children].filter(c => c !== b); let at = others.length;
+                  for (let k = 0; k < others.length; k++) { const q = others[k].getBoundingClientRect(); if (ev.clientX < q.left + q.width / 2 && ev.clientY < q.bottom) { at = k; break; } }
+                  if (where === 'line') ans.splice(i, 1);
+                  ans.splice(Math.min(at, ans.length), 0, t);
+                } else if (where === 'line') ans.splice(i, 1);
+                commit();
+              };
+              document.addEventListener('pointermove', mv); document.addEventListener('pointerup', up); document.addEventListener('pointercancel', up);
+            };
+            return b;
+          };
+          function paint() { pool.innerHTML = ''; line.innerHTML = ''; rest().forEach(t => pool.appendChild(chip(t, 'pool'))); ans.forEach((t, i) => line.appendChild(chip(t, 'line', i))); if (locked) pool.style.display = rest().length ? '' : 'none'; }
+          paint(); refs[f.id] = d;
         } else if (f.type === 'essay') {
           const d = mk(f.rect, 'f-essay'); const t = el('textarea'); t.value = val || ''; t.disabled = locked; t.rows = 2; t.spellcheck = false;
           t.oninput = () => { set(t.value); opts.rerender && opts.rerender(); }; d.appendChild(t); refs[f.id] = t;
