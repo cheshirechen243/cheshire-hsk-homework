@@ -56,7 +56,9 @@ body.presenter{overflow:hidden;background:#2b231d;color:#f3e9da;}
 .ordtag{position:absolute;left:50%;top:4%;transform:translateX(-50%);text-align:center;z-index:6;pointer-events:none;} .ordtag img{width:84px;height:84px;object-fit:contain;display:block;margin:0 auto;} .ordtag span{background:#fff;border:2px solid #432B20;border-radius:12px;padding:0 12px;font:700 22px var(--vn);color:#5F2C16;}
 .ctoast{position:absolute;left:50%;bottom:120px;transform:translateX(-50%);background:rgba(40,28,20,.92);color:#fff;border-radius:14px;padding:10px 24px;font:700 28px var(--vn);z-index:70;}
 body.editing .o-box > .tx{outline:2px dashed #BD582C;outline-offset:-2px;cursor:text;} .o-box > .tx.editing{outline:3px solid #BD582C;background:rgba(255,255,255,.6);}
-#ptool .grow{flex:1;} #pres .btn.end{background:#b3261e;} #pres .btn.end:hover{background:#d93025;}
+#ptool .grow{flex:1;min-width:0;} #pres .btn.end{background:#b3261e;padding:3px 9px;font-size:12px;border-radius:6px;white-space:nowrap;flex:none;} #pres .btn.end:hover{background:#d93025;}
+/* one row: the end-class button must not be pushed onto a second line (it moved the page down while the stroke window was open) */
+#ptool{flex-wrap:nowrap;overflow:hidden;} #ptool .pt{flex:0 1 36px;min-width:24px;} #ptool #ppal{display:flex;align-items:center;flex:0 1 auto;min-width:0;}
 .par{display:flex;align-items:center;gap:6px;font-size:13px;padding:2px 0;border-bottom:1px solid #43372d;} .par img{width:26px;height:26px;object-fit:contain;} .par .pk{color:#cbb994;} .par .pv{margin-left:auto;color:#fff;font-weight:700;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 #pnotes textarea{background:#241d18;color:#fff;border:1px solid #6b5a49;border-radius:6px;}
 /* full-screen slide sorter */
@@ -83,3 +85,7 @@ body.editing .o-box > .tx{outline:2px dashed #BD582C;outline-offset:-2px;cursor:
 
 /* students' answers per blank (teacher console) */
 .czrow{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin:4px 0;font-size:15px;} .czg{display:inline-flex;align-items:center;gap:3px;background:rgba(255,255,255,.08);border-radius:999px;padding:1px 8px 1px 10px;} .czg img{width:22px;height:22px;object-fit:contain;} .czg.ok{background:rgba(80,170,110,.35);} .czg.no{background:rgba(200,80,70,.3);} .czr{color:#9fd6ad;}
+
+/* the themed stroke window keeps the template's buttons in the classroom (teacher) mode as well: '#pres .btn' above is more specific than '.mdl.themed .btn' */
+#pres .mdl.themed .btn{background:var(--m-btn,#fff);color:var(--m-btnink,#432B20);border:var(--m-btnline,2px solid #432B20);border-radius:var(--m-btnradius,.8rem);padding:.4rem 1rem;box-shadow:var(--m-btnshadow,0 3px 0 rgba(67,43,32,.35));}
+#pres .mdl.themed .btn.primary,#pres .mdl.themed .btn.on{background:var(--m-on,#432B20);color:var(--m-onink,#fff);}
