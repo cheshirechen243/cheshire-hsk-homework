@@ -432,6 +432,19 @@ body.student .qz,body.student .cz,body.student .czin{pointer-events:auto;}
 body.student .cw-scwin{overflow:hidden !important;pointer-events:none;}
 body.student .dlg{overflow:hidden !important;pointer-events:none;}
 body.student .ftools button,body.student .fnav,body.student .fcard,body.student .fwrap .corner,body.student .thead .btn,body.student .pbar,body.student .sbtns,body.student .mx,body.student .schars{pointer-events:none;}
+/* pop-up in the look of the template (variables --m-* come from project.meta.theme) */
+.mdl.themed{background:var(--m-bg,var(--panel));border:var(--m-border,0);border-radius:var(--m-radius,2rem);box-shadow:var(--m-shadow,0 20px 60px rgba(0,0,0,.4));}
+.mdl.themed .mx{background:var(--m-btn,rgba(67,43,32,.12));color:var(--m-btnink,inherit);border:var(--m-btnline,0);border-radius:var(--m-btnradius,50%);}
+.mdl.themed .mhead .hz{font-family:var(--m-font,var(--zh));color:var(--m-ink,var(--brown));}
+.mdl.themed .mhead .mp{font-family:var(--m-pyfont,var(--vn));color:var(--m-py,var(--green));}
+.mdl.themed .mhead .mv{font-family:var(--m-vifont,var(--vn));color:var(--m-sub,var(--tan));}
+.mdl.themed .schars button{border:var(--m-btnline,2px solid var(--line));background:var(--m-tile,#fff);color:var(--m-ink,var(--brown));border-radius:var(--m-btnradius,.6rem);font-family:var(--m-font,var(--zh));}
+.mdl.themed .schars button.on{background:var(--m-on,var(--brown));color:var(--m-onink,#fff);}
+.mdl.themed .swrap{border:var(--m-line,3px solid var(--deep));border-radius:var(--m-gridradius,.6rem);background-color:var(--m-tile,#fff);}
+.mdl.themed .smsg{color:var(--m-accent,var(--rust));font-family:var(--m-vifont,var(--vn));}
+.mdl.themed .btn{background:var(--m-btn,var(--paper-2));color:var(--m-btnink,var(--deep));border:var(--m-btnline,2px solid var(--deep));border-radius:var(--m-btnradius,.8rem);box-shadow:var(--m-btnshadow,0 3px 0 rgba(67,43,32,.35));font-family:var(--m-vifont,var(--vn));}
+.mdl.themed .btn.primary,.mdl.themed .btn.on{background:var(--m-on,var(--brown));color:var(--m-onink,#fff);}
+.mdl.themed .btn:hover{filter:brightness(1.06);}
 body.student .sbtns,body.student .mx,body.student .thead .btn,body.student .ftools .seg,body.student .ftools .btn{display:none;}
 body.student .fwrap .corner{display:none;}
 body.student #modal-root .ov{pointer-events:none;}
@@ -449,3 +462,11 @@ body.student .cw-scwin.free{overflow-y:auto !important;pointer-events:auto;}
 
 body.student:not(.mirror) .o-html{pointer-events:auto;}          /* quiz / writing inside the assistant pages */
 .czpop{max-width:22rem !important;padding:.35rem !important;gap:.3rem !important;} .czpop button{font-size:1.15rem !important;padding:.2rem .6rem !important;} .czpop b{font-size:.8rem !important;}
+
+/* fill-in choices in the template's look */
+body.themed .czpop{background:var(--m-bg,#fff);border:var(--m-line,3px solid #000);border-radius:var(--m-radius,.5rem);box-shadow:6px 6px 0 var(--m-btn,#000);}
+body.themed .czpop button{border:var(--m-btnline,2px solid #000);background:var(--m-btn,#fff);color:var(--m-btnink,#000);border-radius:var(--m-btnradius,.4rem);box-shadow:var(--m-btnshadow,none);font-family:var(--m-vifont,inherit);}
+body.themed .czpop button:hover{background:var(--m-on,#000);color:var(--m-onink,#fff);}
+body.themed .czpop b{color:var(--m-accent,inherit);}
+body.themed .cloze .cz:hover{background:color-mix(in srgb,var(--m-btn,#f90) 35%,transparent);}
+body.themed .cloze .cz.sel{background:color-mix(in srgb,var(--m-btn,#f90) 40%,#fff);color:var(--m-ink,#000);}

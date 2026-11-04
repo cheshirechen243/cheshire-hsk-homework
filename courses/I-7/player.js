@@ -18,6 +18,13 @@
     const embed0 = embed;
     const opener = (() => { try { if (window.opener && window.opener.CW_PROJECT) return window.opener; if (embed && window.parent !== window && window.parent.CW_PROJECT) return window.parent; return null; } catch (e) { return null; } })();
     const project = window.LESSON_PROJECT || (opener && opener.CW_PROJECT);
+    if (project && project.meta && project.meta.fontAlias) {          // fonts PowerPoint finds by a shortened name (see 助手/font-embed.js aliasMap): the installed font under that name
+        const st = document.createElement('style'); st.textContent = Object.entries(project.meta.fontAlias).map(([k, v]) => "@font-face{font-family:'" + k.replace(/'/g, '') + "';src:local('" + String(v).replace(/'/g, '') + "')}").join('\n'); document.head.insertBefore(st, document.head.firstChild);          // first in the head: an embedded @font-face of the same name (published site) comes later and wins
+    }
+    if (project && project.meta && project.meta.fontData) {           // subset copies of the template's fonts (import-ppt.js): a preview in a browser that does not use the installed font (user-installed fonts are skipped by some) still draws the right letters
+        const st = document.createElement('style'); st.textContent = Object.entries(project.meta.fontData).map(([k, v]) => "@font-face{font-family:'" + k.replace(/'/g, '') + "';src:url(" + v + ") format('woff2')}").join('\n'); document.head.insertBefore(st, document.head.firstChild);
+    }
+    if (project && project.meta && project.meta.theme) { document.body.classList.add('themed'); Object.keys(project.meta.theme).forEach(k => document.body.style.setProperty('--m-' + k, project.meta.theme[k])); }          // the template's colours for pop-ups that live on the page (fill-in choices)
     if (!project) { document.body.innerHTML = '<p style="padding:2rem;font:16px sans-serif">没有找到课件数据。</p>'; return; }
     const BUILD = (project.meta && project.meta.build) || 0;
     const resolve = window.CW_RESOLVE || (opener && opener.CW_RESOLVE) || (s => (BUILD && s && !/^(data:|https?:|blob:)/.test(s) ? s + '?v=' + BUILD : s));
@@ -80,7 +87,10 @@
         const root = $('#modal-root');
         root.innerHTML = '';
         const ov = h('div', { class: 'ov', onclick: e => { if (e.target === ov && !STUDENT) closeModal(); } });
-        ov.append(h('div', { class: 'mdl' }, h('button', { class: 'mx', onclick: closeModal, title: '关闭 Esc' }, '×'), content));
+        const mdl = h('div', { class: 'mdl' }, h('button', { class: 'mx', onclick: closeModal, title: '关闭 Esc' }, '×'), content);
+        const th = (project.meta && project.meta.theme) || null;          // the pop-up wears the colours / fonts of the template (made by import-ppt.js)
+        if (th) { mdl.classList.add('themed'); Object.keys(th).forEach(k => mdl.style.setProperty('--m-' + k, th[k])); }
+        ov.append(mdl);
         root.append(ov);
         return ov;
     }
@@ -142,7 +152,7 @@
             setMsg('加载笔顺数据…');
             writer = HanziWriter.create(host, chars[i], {
                 width: S - 6, height: S - 6, padding: Math.round(S * 0.05),
-                showOutline: true, showCharacter: true, strokeColor: '#5F2C16', outlineColor: '#e6d8c8', highlightColor: '#C00000', drawingColor: '#432B20',
+                showOutline: true, showCharacter: true, strokeColor: (project.meta.theme && project.meta.theme.ink) || '#5F2C16', outlineColor: '#e6d8c8', highlightColor: '#C00000', drawingColor: (project.meta.theme && project.meta.theme.ink) || '#432B20',
                 drawingWidth: Math.max(14, S / 16), strokeAnimationSpeed: 1, delayBetweenStrokes: 320, showHintAfterMisses: 3,
                 charDataLoader: (c, ok, bad) => hanziGet(c).then(d => { strokes[c] = d; setMsg(hzInfoText(c) || ('共 ' + d.strokes.length + ' 画')); ok(d); }).catch(e => { setMsg('没有这个字的笔顺数据（需要联网下载一次）'); if (bad) bad(e); }),
             });
@@ -235,7 +245,7 @@
         const stage = CW.makeStage(project, slide, Object.assign({ mode: 'player', resolve }, opts || {}));
         stage.style.transform = `scale(${SC})`; stage.style.transformOrigin = '0 0';
         const holder = h('div', { class: 'slideview' + (opts && opts.overlay ? ' overlay' : '') }, stage);
-        setTimeout(() => $$('img[data-once]', stage).forEach(im => CW.playOnce(im)), 0);          // the cover animation starts now (and again whenever this page is shown again)
+        setTimeout(() => { $$('img[data-once]', stage).forEach(im => CW.playOnce(im)); CW.runFx(stage); }, 0);          // the cover animation starts now (and again whenever this page is shown again)
         const runner = new CW.AnimRunner(stage, slide, W, H);
         let audio = null;
         const interactive = slide.objects.some(o => o.quiz || o.cloze);
