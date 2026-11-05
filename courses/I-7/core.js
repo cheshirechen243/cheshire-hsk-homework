@@ -199,6 +199,10 @@
         else if (o.radius != null) ws.borderRadius = typeof o.radius === 'number' ? o.radius + 'px' : o.radius;
         if (o.line && o.line.w) { ws.border = `${o.line.w}px solid ${o.line.color}`; ws.boxSizing = 'border-box'; }
         if (o.alpha != null && o.alpha < 1) ws.opacity = o.alpha;
+        if (o.soft) {          // PowerPoint "soft edges": the picture fades out over the last <soft> px before its border
+            const k = Math.max(1, Math.min(o.w, o.h) / 2), stop = Math.max(0, 100 - o.soft / k * 100), m = o.shape === 'ellipse' ? 'radial-gradient(closest-side,#000 ' + stop + '%,transparent 100%)' : 'linear-gradient(to right,transparent,#000 ' + o.soft + 'px,#000 calc(100% - ' + o.soft + 'px),transparent),linear-gradient(to bottom,transparent,#000 ' + o.soft + 'px,#000 calc(100% - ' + o.soft + 'px),transparent)';
+            ws.webkitMaskImage = ws.maskImage = m; if (o.shape !== 'ellipse') { ws.webkitMaskComposite = 'source-in'; ws.maskComposite = 'intersect'; }
+        }
         wrap.append(img);
         el.append(wrap);
     };

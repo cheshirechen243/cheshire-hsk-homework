@@ -246,6 +246,7 @@
         stage.style.transform = `scale(${SC})`; stage.style.transformOrigin = '0 0';
         const holder = h('div', { class: 'slideview' + (opts && opts.overlay ? ' overlay' : '') }, stage);
         setTimeout(() => { $$('img[data-once]', stage).forEach(im => CW.playOnce(im)); CW.runFx(stage); }, 0);          // the cover animation starts now (and again whenever this page is shown again)
+        if (slide.sound && !embed && !MIRROR && !(opts && opts.overlay)) { try { const a = new Audio(resolve(slide.sound)); a.play().catch(() => { /* the browser wants a click first */ }); } catch (e) { /* no sound */ } }          // the sound of the PowerPoint slide transition
         const runner = new CW.AnimRunner(stage, slide, W, H);
         let audio = null;
         const interactive = slide.objects.some(o => o.quiz || o.cloze);
