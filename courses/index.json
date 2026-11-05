@@ -1,6 +1,15 @@
 {
  "courses": [
   {
+   "id": "I-1",
+   "level": "HSK1",
+   "path": "I-1",
+   "title": "AI小语，你好！",
+   "vi": "Xin chào, AI Tiểu Ngữ!",
+   "no": "I-1",
+   "updated": "2026-11-05T13:05:59.077Z"
+  },
+  {
    "id": "I-6",
    "level": "HSK1",
    "path": "I-6",
