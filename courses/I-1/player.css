@@ -465,8 +465,10 @@ body.student:not(.mirror) .o-html{pointer-events:auto;}          /* quiz / writi
 
 /* fill-in choices in the template's look */
 body.themed .czpop{background:var(--m-bg,#fff);border:var(--m-line,3px solid #000);border-radius:var(--m-radius,.5rem);box-shadow:6px 6px 0 var(--m-btn,#000);}
-body.themed .czpop button{border:var(--m-btnline,2px solid #000);background:var(--m-btn,#fff);color:var(--m-btnink,#000);border-radius:var(--m-btnradius,.4rem);box-shadow:var(--m-btnshadow,none);font-family:var(--m-vifont,inherit);}
-body.themed .czpop button:hover{background:var(--m-on,#000);color:var(--m-onink,#fff);}
+body.themed .czpop button{border:var(--m-btnline,2px solid #000);background:#fffdf8;color:var(--m-ink,#222);border-radius:var(--m-btnradius,.6rem);box-shadow:none;font-family:"KaiTi","STKaiti","Microsoft YaHei",serif;}
+body.themed .czpop button:hover{background:color-mix(in srgb,var(--m-btn,#f90) 16%,#fff);color:var(--m-ink,#222);}
 body.themed .czpop b{color:var(--m-accent,inherit);}
 body.themed .cloze .cz:hover{background:color-mix(in srgb,var(--m-btn,#f90) 35%,transparent);}
 body.themed .cloze .cz.sel{background:color-mix(in srgb,var(--m-btn,#f90) 40%,#fff);color:var(--m-ink,#000);}
+/* video pages: the courseware's bar sits above the video's own controls and does not cover them */
+body.hasvid #dock{bottom:3.8rem;pointer-events:none} body.hasvid #dock > *{pointer-events:auto}
