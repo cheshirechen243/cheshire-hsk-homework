@@ -645,6 +645,7 @@
             document.body.classList.add('freemode'); document.body.classList.remove('compmode');
             if (opts.fromEnd) cur.finish();
         }
+        document.body.classList.toggle('hasvid', (s.objects || []).some(o => o.kind === 'video'));          // a video page: the courseware's bar steps aside, so the video's own bar can be used
         $('#crumb').innerHTML = (s.section ? `<b>${esc(s.section)}</b> · ` : '') + esc(slideLabel(s, S.i));
         $('#pos').textContent = (S.i + 1) + ' / ' + slides.length;
         $('#progress i').style.width = (S.i / Math.max(1, slides.length - 1) * 100) + '%';
