@@ -109,6 +109,7 @@
             else if (o.radius != null) bs.borderRadius = typeof o.radius === 'number' ? o.radius + 'px' : o.radius;
             else if (shape === 'round') bs.borderRadius = Math.min(o.w, o.h) * 0.1667 + 'px';
             if (line) bs.border = `${line.w}px ${dash} ${line.color}`;
+            if (o.bevel) { const v = o.bevel; bs.boxShadow = `inset ${v * .5}px ${v * .5}px ${v}px rgba(255,255,255,.5), inset -${v * .5}px -${v * .5}px ${v}px rgba(0,0,0,.5), 0 ${Math.max(2, v / 2)}px 0 rgba(0,0,0,.22)`; }          // raised edge of a bevelled shape
             if (o.borders) { const b = o.borders; if (b.l) bs.borderLeft = b.l; if (b.r) bs.borderRight = b.r; if (b.t) bs.borderTop = b.t; if (b.b) bs.borderBottom = b.b; }
             bs.boxSizing = 'border-box';
         } else if ((shape === 'frame' || shape === 'plaque') && o.adjPx != null) {
@@ -199,6 +200,10 @@
         else if (o.radius != null) ws.borderRadius = typeof o.radius === 'number' ? o.radius + 'px' : o.radius;
         if (o.line && o.line.w) { ws.border = `${o.line.w}px solid ${o.line.color}`; ws.boxSizing = 'border-box'; }
         if (o.alpha != null && o.alpha < 1) ws.opacity = o.alpha;
+        if (o.soft) {          // PowerPoint "soft edges": the picture fades out over the last <soft> px before its border
+            const k = Math.max(1, Math.min(o.w, o.h) / 2), stop = Math.max(0, 100 - o.soft / k * 100), m = o.shape === 'ellipse' ? 'radial-gradient(closest-side,#000 ' + stop + '%,transparent 100%)' : 'linear-gradient(to right,transparent,#000 ' + o.soft + 'px,#000 calc(100% - ' + o.soft + 'px),transparent),linear-gradient(to bottom,transparent,#000 ' + o.soft + 'px,#000 calc(100% - ' + o.soft + 'px),transparent)';
+            ws.webkitMaskImage = ws.maskImage = m; if (o.shape !== 'ellipse') { ws.webkitMaskComposite = 'source-in'; ws.maskComposite = 'intersect'; }
+        }
         wrap.append(img);
         el.append(wrap);
     };

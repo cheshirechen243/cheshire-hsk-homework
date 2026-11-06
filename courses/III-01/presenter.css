@@ -89,3 +89,6 @@ body.editing .o-box > .tx{outline:2px dashed #BD582C;outline-offset:-2px;cursor:
 /* the themed stroke window keeps the template's buttons in the classroom (teacher) mode as well: '#pres .btn' above is more specific than '.mdl.themed .btn' */
 #pres .mdl.themed .btn{background:var(--m-btn,#fff);color:var(--m-btnink,#432B20);border:var(--m-btnline,2px solid #432B20);border-radius:var(--m-btnradius,.8rem);padding:.4rem 1rem;box-shadow:var(--m-btnshadow,0 3px 0 rgba(67,43,32,.35));}
 #pres .mdl.themed .btn.primary,#pres .mdl.themed .btn.on{background:var(--m-on,#432B20);color:var(--m-onink,#fff);}
+
+/* grips of the text box being edited (teacher's edit tool): move / resize */
+.pgrip{position:absolute;z-index:60;width:34px;height:34px;border-radius:50%;background:#BD582C;color:#fff;font:700 20px/34px Calibri,sans-serif;text-align:center;cursor:grab;box-shadow:0 2px 6px rgba(0,0,0,.3);user-select:none;touch-action:none} .pgrip.mv{left:-17px;top:-17px} .pgrip.rs{right:-17px;bottom:-17px;cursor:nwse-resize}

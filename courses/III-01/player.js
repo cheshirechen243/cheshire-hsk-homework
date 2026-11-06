@@ -246,6 +246,7 @@
         stage.style.transform = `scale(${SC})`; stage.style.transformOrigin = '0 0';
         const holder = h('div', { class: 'slideview' + (opts && opts.overlay ? ' overlay' : '') }, stage);
         setTimeout(() => { $$('img[data-once]', stage).forEach(im => CW.playOnce(im)); CW.runFx(stage); }, 0);          // the cover animation starts now (and again whenever this page is shown again)
+        if (slide.sound && !embed && !MIRROR && !(opts && opts.overlay)) { try { const a = new Audio(resolve(slide.sound)); a.play().catch(() => { /* the browser wants a click first */ }); } catch (e) { /* no sound */ } }          // the sound of the PowerPoint slide transition
         const runner = new CW.AnimRunner(stage, slide, W, H);
         let audio = null;
         const interactive = slide.objects.some(o => o.quiz || o.cloze);
@@ -644,6 +645,7 @@
             document.body.classList.add('freemode'); document.body.classList.remove('compmode');
             if (opts.fromEnd) cur.finish();
         }
+        document.body.classList.toggle('hasvid', (s.objects || []).some(o => o.kind === 'video'));          // a video page: the courseware's bar steps aside, so the video's own bar can be used
         $('#crumb').innerHTML = (s.section ? `<b>${esc(s.section)}</b> · ` : '') + esc(slideLabel(s, S.i));
         $('#pos').textContent = (S.i + 1) + ' / ' + slides.length;
         $('#progress i').style.width = (S.i / Math.max(1, slides.length - 1) * 100) + '%';

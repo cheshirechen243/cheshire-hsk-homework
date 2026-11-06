@@ -99,6 +99,13 @@
     function applyPatchLocal(sid, oid, val) {
         const sl = slides.find(s => s.id === sid); if (!sl) return;
         if (oid === 'notes') { sl.notes = val; return; }
+        if (/~g$/.test(oid)) {          // position / size of a text box (made with the edit tool)
+            const gid = oid.slice(0, -2), gr = CW.findObj(sl.objects || [], gid); if (!gr) return;
+            try { Object.assign(gr.obj, JSON.parse(val)); } catch (e) { return; }
+            const ge = slides[P.S] && slides[P.S].id === sid ? $('.o[data-id="' + gid + '"]') : null;
+            if (ge) { ge.style.left = gr.obj.x + 'px'; ge.style.top = gr.obj.y + 'px'; ge.style.width = gr.obj.w + 'px'; ge.style.height = gr.obj.h + 'px'; }
+            return;
+        }
         const r = CW.findObj(sl.objects || [], oid); if (!r) return;
         r.obj.html = val;
         if (slides[P.S] && slides[P.S].id === sid) {
@@ -135,7 +142,20 @@
             const r = CW.findObj(slides[P.S].objects || [], oid); if (!r) return;
             tx.innerHTML = r.obj.html || '';                         // raw text (no blanks) while editing
             tx.contentEditable = 'true'; tx.focus(); tx.classList.add('editing');
+            const box = tx.parentElement, obj = r.obj, grips = [];
+            const grip = (kind, txt, title) => {                     // ✥ moves the text box, ⇲ changes its size (kept like a text fix: students and the next lesson see it)
+                const g = h('div', { class: 'pgrip ' + kind, title }, txt); box.append(g); grips.push(g);
+                g.addEventListener('pointerdown', e => {
+                    e.preventDefault(); e.stopPropagation(); g.setPointerCapture(e.pointerId);
+                    const s = (box.getBoundingClientRect().width / (obj.w || 1)) || 1, x0 = e.clientX, y0 = e.clientY, o0 = { x: obj.x, y: obj.y, w: obj.w, h: obj.h };
+                    const mv = ev => { const dx = (ev.clientX - x0) / s, dy = (ev.clientY - y0) / s; if (kind === 'mv') { obj.x = o0.x + dx; obj.y = o0.y + dy; } else { obj.w = Math.max(40, o0.w + dx); obj.h = Math.max(24, o0.h + dy); } box.style.left = obj.x + 'px'; box.style.top = obj.y + 'px'; box.style.width = obj.w + 'px'; box.style.height = obj.h + 'px'; };
+                    const up = () => { g.removeEventListener('pointermove', mv); g.removeEventListener('pointerup', up); savePatch(sid, oid + '~g', JSON.stringify({ x: +obj.x.toFixed(1), y: +obj.y.toFixed(1), w: +obj.w.toFixed(1), h: +obj.h.toFixed(1) })); toast('文字框位置/大小已保存，学生和下次上课都会看到'); };
+                    g.addEventListener('pointermove', mv); g.addEventListener('pointerup', up);
+                });
+            };
+            grip('mv', '✥', '拖动：移动文字框'); grip('rs', '⇲', '拖动：改文字框大小');
             const done = () => {
+                grips.forEach(g => g.remove());
                 tx.removeEventListener('blur', done); tx.contentEditable = 'false'; tx.classList.remove('editing');
                 const html = tx.innerHTML.replace(/<div>/g, '<p>').replace(/<\/div>/g, '</p>');
                 if (html !== r.obj.html) { applyPatchLocal(sid, oid, html); savePatch(sid, oid, html); toast('已修改，学生和下次上课都会看到'); }
