@@ -200,8 +200,10 @@
       }
     } else if (f.rect) {
       // the score / "to be graded" tag sits inside the answer box on its top-right corner (blank space), never over the question above it
-      if (res.graded) put('fix-tag score in', res.points + '/' + f.points, f.rect[0] + f.rect[2], f.rect[1]);
-      else put('fix-tag wait in', '待批改 Chờ chấm', f.rect[0] + f.rect[2], f.rect[1]);
+      // best: in the free margin to the right of the box, level with it; if the box reaches the page edge, inside its top-right corner
+      const rx = f.rect[0] + f.rect[2], side = 1 - rx > (res.graded ? 0.1 : 0.22);
+      const tg = res.graded ? put('fix-tag score ' + (side ? 'side' : 'in'), res.points + '/' + f.points, side ? rx : rx, side ? f.rect[1] + f.rect[3] / 2 : f.rect[1])
+                            : put('fix-tag wait ' + (side ? 'side' : 'in'), '待批改 Chờ chấm', rx, side ? f.rect[1] + f.rect[3] / 2 : f.rect[1]);
     }
   }
   // the chosen letter of a choice field is stored on the answers object passed to renderLesson

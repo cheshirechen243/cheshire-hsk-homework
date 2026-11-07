@@ -177,6 +177,7 @@ body.lesson-body { overflow: hidden; }
 .fix-tag.score { background: var(--blue-deep); } .fix-tag.wait { background: var(--part); }
 .fix-tag.left { transform: translate(-100%, -50%); margin-top: 0; }
 .fix-tag.in { transform: translate(-100%, 0); margin: 4px 0 0 -5px; }
+.fix-tag.side { transform: translate(0, -50%); margin: 0 0 0 .8cqw; }
 .fix-tag.below { transform: none; margin-top: 3px; }
 .fix-tag.above { transform: translate(-100%, -100%); margin-top: -3px; }
 .cmt { position: absolute; z-index: 7; margin-top: 4px; max-width: 46cqw; background: var(--yellow); color: var(--ink); border: 2px solid var(--outline); border-radius: 8px; padding: .3cqw 1cqw; font: 700 max(11px, 1.9cqw)/1.35 var(--sans); box-shadow: 0 2px 0 rgba(61,55,96,.3); pointer-events: none; }
