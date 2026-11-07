@@ -199,8 +199,9 @@
         }
       }
     } else if (f.rect) {
-      if (res.graded) put('fix-tag score', res.points + '/' + f.points, f.rect[0], f.rect[1]);
-      else put('fix-tag wait', '待批改 Chờ chấm', f.rect[0], f.rect[1]);
+      // the score / "to be graded" tag sits inside the answer box on its top-right corner (blank space), never over the question above it
+      if (res.graded) put('fix-tag score in', res.points + '/' + f.points, f.rect[0] + f.rect[2], f.rect[1]);
+      else put('fix-tag wait in', '待批改 Chờ chấm', f.rect[0] + f.rect[2], f.rect[1]);
     }
   }
   // the chosen letter of a choice field is stored on the answers object passed to renderLesson
