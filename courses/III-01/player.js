@@ -248,6 +248,8 @@
         setTimeout(() => { $$('img[data-once]', stage).forEach(im => CW.playOnce(im)); CW.runFx(stage); }, 0);          // the cover animation starts now (and again whenever this page is shown again)
         if (slide.sound && !embed && !MIRROR && !(opts && opts.overlay)) { try { const a = new Audio(resolve(slide.sound)); a.play().catch(() => { /* the browser wants a click first */ }); } catch (e) { /* no sound */ } }          // the sound of the PowerPoint slide transition
         const runner = new CW.AnimRunner(stage, slide, W, H);
+        runner.resolve = resolve; runner.live = !STUDENT; runner.onFire = () => { if (ROLE === 'teacher') post(); };          // click-triggered effects: the teacher's click goes to the students, who only watch
+        if (embed || MIRROR) runner.resolve = null;
         let audio = null;
         const interactive = slide.objects.some(o => o.quiz || o.cloze);
         if (STUDENT && !MIRROR && interactive && stage._scwin) stage._scwin.classList.add('free');
@@ -363,6 +365,7 @@
                 if (!st || st.k == null) return;
                 if (st.k > runner.k) { let n = 0; while (runner.k < st.k && n++ < 50) runner.next(); }
                 else if (st.k < runner.k) runner.reset(st.k, false);
+                if (st.tr) { if (runner.fired.some(id => !st.tr.includes(id))) runner.reset(runner.k, false); st.tr.forEach(id => runner.fire(id)); }
                 if (st.rv && !stage.dataset.revealed) revealNow(st.rvd || null);
                 else if (!st.rv && stage.dataset.revealed) this.reset();
                 const w = stage._scwin;
@@ -375,7 +378,7 @@
             destroy() { closePop(); if (CZ.rv && CZ.rv.slide === slide.id) CZ.rv = null; $$('audio,video', holder).forEach(m => m.pause()); hideBar(); videoSync = null; },
             next() { return runner.next(); }, prev() { return runner.prev(); },
             finish() { runner.finish(); },
-            state: () => { const w = stage._scwin; return { k: runner.k, total: runner.total, rv: !!stage.dataset.revealed, sc: w && w.scrollHeight > w.clientHeight ? +(w.scrollTop / (w.scrollHeight - w.clientHeight)).toFixed(4) : null }; },
+            state: () => { const w = stage._scwin; return { k: runner.k, tr: runner.fired.slice(), total: runner.total, rv: !!stage.dataset.revealed, sc: w && w.scrollHeight > w.clientHeight ? +(w.scrollTop / (w.scrollHeight - w.clientHeight)).toFixed(4) : null }; },
         };
     }
 

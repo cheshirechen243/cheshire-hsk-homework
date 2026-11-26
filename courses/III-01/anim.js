@@ -60,6 +60,7 @@
         const W = stage.W, H = stage.H;
         const g = { x: parseFloat(el.style.left) || 0, y: parseFloat(el.style.top) || 0, w: parseFloat(el.style.width) || 0, h: parseFloat(el.style.height) || 0 };
         const V = { visibility: 'visible' };
+        if (cls === 'emph') return [Object.assign({ scale: '1' }, V), Object.assign({ scale: String(e.by || 1.25) }, V)];          // "grow / shrink" emphasis: stays that size
         let a, b;
         switch (e.fx) {
             case 'fade': a = Object.assign({ opacity: 0 }, V); b = Object.assign({ opacity: 1 }, V); break;
@@ -98,7 +99,35 @@
             this.k = 0;
             this.anims = [];
             this.timers = [];
+            this.trigs = slide.trig || [];          // "click this object -> these effects" (PowerPoint trigger animations)
+            this.fired = []; this.live = true; this.onFire = null; this.resolve = null;
             this.reset(0, true);
+            this.trigs.forEach(t => {
+                [].concat(t.on).forEach(id => {          // a group that was clicked in PowerPoint is several parts here: any of them
+                    const root = this.stage.querySelector(`[data-id="${id}"]`); if (!root) return;
+                    root.style.cursor = 'pointer';
+                    root.addEventListener('click', ev => { if (!this.live) return; ev.stopPropagation(); if (this.fire(t.id) && this.onFire) this.onFire(); });
+                });
+            });
+        }
+        playSnd(src, delay) {
+            if (!src || !this.resolve) return;
+            this.timers.push(setTimeout(() => { try { new Audio(this.resolve(src)).play().catch(() => { /* the browser wants a click first */ }); } catch (er) { /* no sound */ } }, Math.max(0, delay || 0)));
+        }
+        // one trigger: its effects run (once per visit of the page, until the page is reset)
+        fire(id, instant) {
+            const t = this.trigs.find(x => x.id === id); if (!t || this.fired.includes(id)) return false;
+            this.fired.push(id);
+            t.effects.forEach(e => {
+                const delay = Math.max(0, e.at || 0) * 1000, dur = Math.max(1, (e.dur == null ? .5 : e.dur) * 1000);
+                if (!instant) this.playSnd(e.snd, delay);
+                this.targets(e).forEach(el => {
+                    const a = el.animate(frames(e, el, this.dims, e.cls), { duration: instant ? 1 : dur, delay: instant ? 0 : delay, fill: 'both', easing: 'ease-out' });
+                    this.anims.push(a);
+                    if (instant) { try { a.finish(); } catch (er) { /* ignore */ } }
+                });
+            });
+            return true;
         }
         targets(e) {
             const root = this.stage.querySelector(`[data-id="${e.obj}"]`);
@@ -122,7 +151,9 @@
             const first = new Map();
             this.steps.forEach(s => s.effects.forEach(({ e }) => { this.targets(e).forEach(t => { if (!first.has(t)) first.set(t, e.cls); }); }));
             this.stage.querySelectorAll('.o, .tx > p').forEach(n => { n.style.visibility = ''; });
+            (this.trigs || []).forEach(tr => tr.effects.forEach(e => { this.targets(e).forEach(t => { if (!first.has(t)) first.set(t, e.cls); }); }));
             first.forEach((cls, t) => { if (cls === 'in') t.style.visibility = 'hidden'; });
+            this.fired = [];
             this.k = 0;
             for (let i = 0; i < k; i++) this.runStep(this.steps[i], true);
             this.k = k;
@@ -131,6 +162,7 @@
         runStep(step, instant) {
             step.effects.forEach(({ e, start, dur }) => {
                 const ts = this.targets(e);
+                if (e.snd && !instant) this.playSnd(e.snd, start);
                 if (e.cls === 'media' || e.fx === 'play') {
                     ts.forEach(t => { const m = t.querySelector('audio,video'); if (m && !instant) this.timers.push(setTimeout(() => { try { m.play(); } catch (er) { /* ignore */ } }, start)); });
                     return;
